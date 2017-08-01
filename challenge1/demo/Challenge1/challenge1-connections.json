@@ -1,0 +1,170 @@
+﻿{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+
+  },
+  "variables": {
+    "gatewayType": "Vpn",
+    "vpnType": "RouteBased",
+    "sku": "Basic",
+    "backofficeGatewayName": "backoffice-GWAY",
+    "backofficeGatewayPIP": "[concat(variables('backofficeGatewayName'),'-PIP')]",
+    "backofficeConnectionName": "backoffice-lab-CONN",
+    "backofficeVNetName": "backoffice-VNET",
+    "backofficeVnetID": "[resourceId('Microsoft.Network/virtualNetworks', variables('backofficeVNetName'))]",
+    "backofficeSubnetRef": "[concat(variables('backofficeVnetID'), '/subnets/GatewaySubnet')]",
+
+    "labGatewayName": "workstation-GWAY",
+    "labGatewayPIP": "[concat(variables('labGatewayName'),'-PIP')]",
+    "labConnectionName": "lab-backoffice-CONN",
+    "labVNetName": "workstationVNET",
+    "labVnetID": "[resourceId('Microsoft.Network/virtualNetworks', variables('labVNetName'))]",
+    "labSubnetRef": "[concat(variables('labVnetID'), '/subnets/GatewaySubnet')]"
+
+  },
+  "resources": [
+    {
+      "apiVersion": "2015-06-15",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/publicIPAddresses/', variables('backofficeGatewayPIP'))]"
+      ],
+      "location": "[resourceGroup().location]",
+      "name": "[variables('backofficeGatewayName')]",
+      "properties": {
+        "gatewayType": "[variables('gatewayType')]",
+        "ipConfigurations": [
+          {
+            "name": "default",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[variables('backofficeSubnetRef')]"
+              },
+              "publicIpAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('backofficeGatewayPIP'))]"
+              }
+            }
+          }
+        ],
+        "enableBgp": false,
+        "vpnType": "[variables('vpnType')]",
+        "sku": {
+          "name": "[variables('sku')]",
+          "tier": "[variables('sku')]"
+        }
+      },
+      "tags": {
+        "displayName": "Back office gateway"
+      },
+      "type": "Microsoft.Network/virtualNetworkGateways"
+    },
+    {
+      "apiVersion": "2016-03-30",
+      "location": "[resourceGroup().location]",
+      "name": "[variables('backofficeGatewayPIP')]",
+      "properties": {
+        "publicIPAllocationMethod": "Dynamic"
+      },
+      "tags": {
+        "displayName": "Back office public IP"
+      },
+      "type": "Microsoft.Network/publicIPAddresses"
+    },
+    {
+      "apiVersion": "2015-06-15",
+      "name": "[variables('labGatewayName')]",
+      "type": "Microsoft.Network/virtualNetworkGateways",
+      "tags": {
+        "displayName": "Lab gateway"
+      },
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/publicIPAddresses/', variables('labGatewayPIP'))]"
+      ],
+      "properties": {
+        "gatewayType": "[variables('gatewayType')]",
+        "ipConfigurations": [
+          {
+            "name": "default",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[variables('labSubnetRef')]"
+              },
+              "publicIpAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('labGatewayPIP'))]"
+              }
+            }
+          }
+        ],
+        "enableBgp": false,
+        "vpnType": "[variables('vpnType')]",
+        "sku": {
+          "name": "[variables('sku')]",
+          "tier": "[variables('sku')]"
+        }
+      }
+    },
+    {
+      "apiVersion": "2016-03-30",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "tags": {
+        "displayName": "Lab public IP"
+      },
+      "name": "[variables('labGatewayPIP')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "publicIPAllocationMethod": "Dynamic"
+      }
+    },
+    {
+      "type": "Microsoft.Network/connections",
+      "name": "[variables('backofficeConnectionName')]",
+      "apiVersion": "2017-06-01",
+      "location": "eastus",
+      "tags": {
+        "displayName": "Back office connection"
+      },
+      "dependsOn": [ "[resourceId('Microsoft.Network/virtualNetworkGateways', variables('backofficeGatewayName'))]", "[resourceId('Microsoft.Network/virtualNetworkGateways', variables('labGatewayName'))]" ],
+      "properties": {
+        "virtualNetworkGateway1": {
+          "id": "[resourceId('Microsoft.Network/virtualNetworkGateways', variables('backofficeGatewayName'))]"
+        },
+        "virtualNetworkGateway2": {
+          "id": "[resourceId('Microsoft.Network/virtualNetworkGateways', variables('labGatewayName'))]"
+        },
+        "connectionType": "Vnet2Vnet",
+        "sharedKey": "ABC123",
+        "routingWeight": 0,
+        "enableBgp": false,
+        "usePolicyBasedTrafficSelectors": false,
+        "ipsecPolicies": []
+      }
+    },
+    {
+      "type": "Microsoft.Network/connections",
+      "name": "[variables('labConnectionName')]",
+      "apiVersion": "2017-06-01",
+      "location": "eastus",
+      "tags": {
+        "displayName": "Lab connection"
+      },
+      "dependsOn": [ "[resourceId('Microsoft.Network/virtualNetworkGateways', variables('backofficeGatewayName'))]", "[resourceId('Microsoft.Network/virtualNetworkGateways', variables('labGatewayName'))]" ],
+      "properties": {
+        "virtualNetworkGateway2": {
+          "id": "[resourceId('Microsoft.Network/virtualNetworkGateways', variables('backofficeGatewayName'))]"
+        },
+        "virtualNetworkGateway1": {
+          "id": "[resourceId('Microsoft.Network/virtualNetworkGateways', variables('labGatewayName'))]"
+        },
+        "connectionType": "Vnet2Vnet",
+        "sharedKey": "ABC123",
+        "routingWeight": 0,
+        "enableBgp": false,
+        "usePolicyBasedTrafficSelectors": false,
+        "ipsecPolicies": []
+      }
+    }
+  ]
+}

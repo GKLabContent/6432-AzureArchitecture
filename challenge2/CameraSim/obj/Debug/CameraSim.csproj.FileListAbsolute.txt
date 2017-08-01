@@ -1,0 +1,1 @@
+D:\Courses\4460 - Azure Architecture\github\student\challenge2\CameraSim\bin\Debug\CameraSim.exe.config

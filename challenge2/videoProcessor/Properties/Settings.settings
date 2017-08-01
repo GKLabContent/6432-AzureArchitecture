@@ -1,0 +1,33 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="videoProcessor.Properties" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="SB_CONNECT" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">{Enter the connection string for your service bus namespace}</Value>
+    </Setting>
+    <Setting Name="VIDEO_STORAGE_ACCOUNT" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">{Enter your video storage account name}</Value>
+    </Setting>
+    <Setting Name="VIDEO_STORAGE_SAS" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">{Enter your video storage SAS}</Value>
+    </Setting>
+    <Setting Name="BATCH_STORAGE_ACCOUNT" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">{Enter your batch storage account name}</Value>
+    </Setting>
+    <Setting Name="BATCH_STORAGE_KEY" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">{Enter your batch storage account key}</Value>
+    </Setting>
+    <Setting Name="BATCH_URI" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">{Enter your batch account URL}</Value>
+    </Setting>
+    <Setting Name="BATCH_ACCOUNT_NAME" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">{Enter your batch account Name}</Value>
+    </Setting>
+    <Setting Name="BATCH_KEY" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">{Enter your batch account Key}</Value>
+    </Setting>
+    <Setting Name="DEVELOPMENT" Type="System.Boolean" Scope="Application">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>

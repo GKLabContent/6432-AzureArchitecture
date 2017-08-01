@@ -1,0 +1,20 @@
+{
+  "bindings": [
+    {
+      "name": "myBlob",
+      "type": "blobTrigger",
+      "direction": "in",
+      "path": "video",
+      "connection": "tswbatchstorage_STORAGE"
+    },
+    {
+      "type": "serviceBus",
+      "name": "outputSbMsg",
+      "queueName": "videoprocess",
+      "connection": "tswbatchsb_RootManageSharedAccessKey_SERVICEBUS",
+      "accessRights": "Manage",
+      "direction": "out"
+    }
+  ],
+  "disabled": false
+}

@@ -1,0 +1,13 @@
+{
+	"CommandLine": "cmd /c %AZ_BATCH_APP_PACKAGE_<your package name>#<package version>%\\videoProcessor.exe",
+	"EnvironmentVariables": {
+		"BATCH_STORAGE_ACCOUNT": "<batch storage account name>",
+		"BATCH_STORAGE_KEY": "<batch storage account key>",
+		"BATCH_URI": "<batch URL>",
+		"BATCH_ACCOUNT_NAME": "<batch name>",
+		"BATCH_KEY": "<batch key>",
+		"SB_CONNECT": "<service bus connection string>",
+		"BATCH_STORAGE_SAS": "<video storage SAS>",
+		"DEVELOPMENT": "true"
+	}
+}
