@@ -5,6 +5,8 @@ VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{151D2E53-A2C4-4D7D-83FE-D05416EBD58E}") = "Challenge1", "Challenge1\Challenge1.deployproj", "{7C1C23E2-9556-450B-9F9A-132D7F5BF489}"
 EndProject
+Project("{151D2E53-A2C4-4D7D-83FE-D05416EBD58E}") = "challenge1-VMSS", "challenge1-VMSS\challenge1-VMSS.deployproj", "{94DA3089-54AE-4A60-A1BE-3574416D0961}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{7C1C23E2-9556-450B-9F9A-132D7F5BF489}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7C1C23E2-9556-450B-9F9A-132D7F5BF489}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7C1C23E2-9556-450B-9F9A-132D7F5BF489}.Release|Any CPU.Build.0 = Release|Any CPU
+		{94DA3089-54AE-4A60-A1BE-3574416D0961}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{94DA3089-54AE-4A60-A1BE-3574416D0961}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{94DA3089-54AE-4A60-A1BE-3574416D0961}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{94DA3089-54AE-4A60-A1BE-3574416D0961}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,0 +1,494 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+ 
+
+    "VMName": {
+      "type": "string",
+      "minLength": 1,
+      "metadata": {
+        "displayName": "Virtual machine name prefix (used for web server and workstation)"
+      }
+    },
+    "AdminUserName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "AdminPassword": {
+      "type": "securestring"
+    }
+    },
+  "variables": {
+    "onpremPrefixes": [ "10.0.0.0/24", "10.254.0.0/27" ],
+    "backofficePrefixes": [ "10.3.0.0/24", "10.254.0.32/27" ],
+    "applicationPrefixes": [ "10.3.1.0/25", "10.3.1.128/25", "10.254.0.64/27","10.254.0.96/27" ],
+    "subnetNames": [ "default", "GatewaySubnet" ],
+    "applicationSubnetNames": [ "web", "logistics", "GatewaySubnet", "appGatewaySubnet" ],
+    "onpremVNetName": "workstationVNET",
+    "backofficeVNetName": "backoffice-VNET",
+    "applicationsVNetName": "applications-VNET",
+    "webserverName": "[concat(parameters('VMName'),'web')]",
+    "webServerNICName": "[concat(variables('webserverName'),'-NIC')]",
+    "webServerNICVnetID": "[resourceId('Microsoft.Network/virtualNetworks', variables('applicationsVNetName'))]",
+    "webServerNICSubnetRef": "[concat(variables('webServerNICVnetID'), '/subnets/', variables('applicationSubnetNames')[0])]",
+    "webServerVMOSDiskName": "[concat(variables('webserverName'),'-OSDisk')]",
+    "workstationName": "[concat(parameters('VMName'),'onprem')]",
+    "workstationNICName": "[concat(variables('workstationName'),'-NIC')]",
+    "workstationNICVnetID": "[resourceId('Microsoft.Network/virtualNetworks', variables('onpremVNetName'))]",
+    "workstationNICSubnetRef": "[concat(variables('workstationNICVnetID'), '/subnets/', variables('subnetNames')[0])]",
+    "workstationPIPName": "[concat(variables('workstationName'),'-PIP')]",
+    "workstationVMOSDiskName": "[concat(variables('workstationName'),'-OSDisk')]",
+    "storageName": "[concat('ops', uniqueString(resourceGroup().id))]",
+    "storageType": "Standard_LRS",
+    "VMImagePublisher": "MicrosoftWindowsServer",
+    "VMImageOffer": "WindowsServer",
+    "VMVmSize": "Standard_D2_v2",
+    "VMOSVersion": "2012-R2-Datacenter",
+    "VMStorageAccountContainerName": "vhds",
+    "WebNSGName": "webNSG",
+    "logisticsNSGName": "logisticsNSG",
+    "backofficeNSGName": "backofficeNSG"
+  },
+  "resources": [
+    {
+      "name": "[variables('onpremVNetName')]",
+      "type": "Microsoft.Network/virtualNetworks",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2016-03-30",
+      "dependsOn": [],
+      "tags": {
+        "displayName": "onprem network"
+      },
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[variables('onpremPrefixes')[0]]",
+            "[variables('onpremPrefixes')[1]]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('subnetNames')[0]]",
+            "properties": {
+              "addressPrefix": "[variables('onpremPrefixes')[0]]"
+            }
+          },
+          {
+            "name": "[variables('subnetNames')[1]]",
+            "properties": {
+              "addressPrefix": "[variables('onpremPrefixes')[1]]"
+            }
+          }
+
+        ]
+      }
+    },
+    {
+      "name": "[variables('backofficeVNetName')]",
+      "type": "Microsoft.Network/virtualNetworks",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2016-03-30",
+      "dependsOn": [ "[resourceId('Microsoft.Network/networkSecurityGroups', variables('backofficeNSGName'))]" ],
+      "tags": {
+        "displayName": "back office network"
+      },
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[variables('backofficePrefixes')[0]]",
+            "[variables('backofficePrefixes')[1]]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('subnetNames')[0]]",
+            "properties": {
+              "addressPrefix": "[variables('backofficePrefixes')[0]]",
+              "networkSecurityGroup": { "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('backofficeNSGName'))]" }
+
+            }
+          },
+          {
+            "name": "[variables('subnetNames')[1]]",
+            "properties": {
+              "addressPrefix": "[variables('backofficePrefixes')[1]]"
+            }
+          }
+
+        ],
+        "resources": [
+
+        ]
+      }
+    },
+    {
+      "name": "[variables('applicationsVNetName')]",
+      "type": "Microsoft.Network/virtualNetworks",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2016-03-30",
+      "dependsOn": [ "[resourceId('Microsoft.Network/networkSecurityGroups', variables('webNSGName'))]", "[resourceId('Microsoft.Network/networkSecurityGroups', variables('logisticsNSGName'))]" ],
+      "tags": {
+        "displayName": "applications network"
+      },
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": 
+            "[variables('applicationPrefixes')]"
+          
+        },
+        "subnets": [
+          {
+            "name": "[variables('applicationSubnetNames')[0]]",
+            "properties": {
+              "addressPrefix": "[variables('applicationPrefixes')[0]]",
+              "networkSecurityGroup": { "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('webNSGName'))]" }
+
+
+            }
+          },
+          {
+            "name": "[variables('applicationSubnetNames')[1]]",
+            "properties": {
+              "addressPrefix": "[variables('applicationPrefixes')[1]]",
+             "networkSecurityGroup": { "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('logisticsNSGName'))]" }
+            }
+          },
+          {
+            "name": "[variables('applicationSubnetNames')[2]]",
+            "properties": {
+              "addressPrefix": "[variables('applicationPrefixes')[2]]"
+             }
+          },
+          {
+            "name": "[variables('applicationSubnetNames')[3]]",
+            "properties": {
+              "addressPrefix": "[variables('applicationPrefixes')[3]]"
+            }
+          }
+
+        ],
+        "resources": [
+        ]
+      }
+    },
+    {
+      "name": "[variables('webServerNICName')]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2016-03-30",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('applicationsVNetName'))]"
+      ],
+      "tags": {
+        "displayName": "web Server NIC"
+      },
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[variables('webServerNICSubnetRef')]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "[variables('workstationNICName')]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2016-03-30",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('onpremVNetName'))]",
+        "[resourceId('Microsoft.Network/publicIPAddresses', variables('workstationPIPName'))]"
+      ],
+      "tags": {
+        "displayName": "Workstation NIC"
+      },
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[variables('workstationNICSubnetRef')]"
+              },
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('workstationPIPName'))]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "[variables('workstationPIPName')]",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2016-03-30",
+      "dependsOn": [],
+      "tags": {
+        "displayName": "workstation PIP"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Dynamic"
+      }
+    },
+    {
+      "name": "[variables('storageName')]",
+      "type": "Microsoft.Storage/storageAccounts",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2016-01-01",
+      "sku": {
+        "name": "[variables('storageType')]"
+      },
+      "dependsOn": [],
+      "tags": {
+        "displayName": "onpremstorage"
+      },
+      "kind": "Storage"
+    },
+
+    {
+      "name": "[variables('workstationName')]",
+      "type": "Microsoft.Compute/virtualMachines",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-06-15",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageName'))]",
+        "[resourceId('Microsoft.Network/networkInterfaces', variables('workstationNICName'))]"
+      ],
+      "tags": {
+        "displayName": "workstation VM"
+      },
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[variables('VMVmSize')]"
+        },
+        "osProfile": {
+          "computerName": "[variables('workstationName')]",
+          "adminUsername": "[parameters('AdminUsername')]",
+          "adminPassword": "[parameters('AdminPassword')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "[variables('VMImagePublisher')]",
+            "offer": "[variables('VMImageOffer')]",
+            "sku": "[variables('VMOSVersion')]",
+            "version": "latest"
+          },
+          "osDisk": {
+            "name": "[variables('workstationVMOSDiskName')]",
+            "vhd": {
+              "uri": "[concat(reference(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), '2016-01-01').primaryEndpoints.blob, variables('VMStorageAccountContainerName'), '/', variables('workstationVMOSDiskName'), '.vhd')]"
+            },
+            "caching": "ReadWrite",
+            "createOption": "FromImage"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('workstationNICName'))]"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "[variables('webServerName')]",
+      "type": "Microsoft.Compute/virtualMachines",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-06-15",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageName'))]",
+        "[resourceId('Microsoft.Network/networkInterfaces', variables('webServerNICName'))]"
+      ],
+      "tags": {
+        "displayName": "Web Server VM"
+      },
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[variables('VMVmSize')]"
+        },
+        "osProfile": {
+          "computerName": "[variables('webserverName')]",
+          "adminUsername": "[parameters('AdminUsername')]",
+          "adminPassword": "[parameters('AdminPassword')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "[variables('VMImagePublisher')]",
+            "offer": "[variables('VMImageOffer')]",
+            "sku": "[variables('VMOSVersion')]",
+            "version": "latest"
+          },
+          "osDisk": {
+            "name": "[variables('webServerVMOSDiskName')]",
+            "vhd": {
+              "uri": "[concat(reference(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), '2016-01-01').primaryEndpoints.blob, variables('VMStorageAccountContainerName'), '/', variables('webServerVMOSDiskName'), '.vhd')]"
+            },
+            "caching": "ReadWrite",
+            "createOption": "FromImage"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('webServerNICName'))]"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "apiVersion": "2015-06-15",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[variables('webNSGName')]",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "NSG - Web"
+      },
+      "properties": {
+        "securityRules": [
+          {
+            "name": "rdp-rule",
+            "properties": {
+              "description": "Allow RDP",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "3389",
+              "sourceAddressPrefix": "10.0.0.0/16",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "web-rule",
+            "properties": {
+              "description": "Allow WEB",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "80",
+              "sourceAddressPrefix": "Internet",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 101,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "SSL-rule",
+            "properties": {
+              "description": "Allow SSL",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "443",
+              "sourceAddressPrefix": "Internet",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 102,
+              "direction": "Inbound"
+            }
+          }
+        ]
+      }
+
+    },
+    {
+      "apiVersion": "2015-06-15",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[variables('logisticsNSGName')]",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "NSG - Logistics"
+      },
+      "properties": {
+        "securityRules": [
+          {
+            "name": "ssh-rule",
+            "properties": {
+              "description": "Allow SSH",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "22",
+              "sourceAddressPrefix": "10.0.0.0/16",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "service-rule",
+            "properties": {
+              "description": "Allow traffic from the web servers to port 1234",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "1234",
+              "sourceAddressPrefix": "10.3.1.0/23",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 101,
+              "direction": "Inbound"
+            }
+          }
+
+        ]
+      }
+
+    },
+    {
+      "apiVersion": "2015-06-15",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[variables('backofficeNSGName')]",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "NSG - Back office"
+      },
+      "properties": {
+        "securityRules": [
+          {
+            "name": "Employee-access",
+            "properties": {
+              "description": "Allow all access from local Wunhill subnets",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "10.0.0.0/16",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "SAP-rule",
+            "properties": {
+              "description": "Allow traffic from the web servers to SAP",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "4346",
+              "sourceAddressPrefix": "10.3.1.0/23",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 101,
+              "direction": "Inbound"
+            }
+          }
+
+        ]
+      }
+
+    }
+
+  ],
+  "outputs": {}
+}

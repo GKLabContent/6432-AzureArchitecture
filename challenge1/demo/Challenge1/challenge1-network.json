@@ -2,21 +2,7 @@
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "webServerPIPDnsName": {
-      "type": "string",
-      "metadata": {
-        "displayName": "Public DNS prefix for the web server"
-      },
-      "minLength": 1
-    },
-
-    "workstationPIPDnsName": {
-      "type": "string",
-      "minLength": 1,
-      "metadata": {
-        "displayName": "Public DNS prefix for the workstation"
-      }
-    },
+ 
 
     "VMName": {
       "type": "string",
@@ -36,19 +22,16 @@
   "variables": {
     "onpremPrefixes": [ "10.0.0.0/24", "10.254.0.0/27" ],
     "backofficePrefixes": [ "10.3.0.0/24", "10.254.0.32/27" ],
-    "applicationPrefixes": [ "10.3.1.0/25", "10.3.1.128/25", "10.254.0.64/27" ],
+    "applicationPrefixes": [ "10.3.1.0/25", "10.3.1.128/25", "10.254.0.64/27","10.254.0.96/27" ],
     "subnetNames": [ "default", "GatewaySubnet" ],
-    "applicationSubnetNames": [ "web", "logistics", "GatewaySubnet" ],
+    "applicationSubnetNames": [ "web", "logistics", "GatewaySubnet", "appGatewaySubnet" ],
     "onpremVNetName": "workstationVNET",
     "backofficeVNetName": "backoffice-VNET",
     "applicationsVNetName": "applications-VNET",
-    "backofficePeerName": "backoffice-app-PEER",
-    "applicationPeerName": "app-backoffice-PEER",
     "webserverName": "[concat(parameters('VMName'),'web')]",
     "webServerNICName": "[concat(variables('webserverName'),'-NIC')]",
     "webServerNICVnetID": "[resourceId('Microsoft.Network/virtualNetworks', variables('applicationsVNetName'))]",
     "webServerNICSubnetRef": "[concat(variables('webServerNICVnetID'), '/subnets/', variables('applicationSubnetNames')[0])]",
-    "webServerPIPName": "[concat(variables('webserverName'),'-PIP')]",
     "webServerVMOSDiskName": "[concat(variables('webserverName'),'-OSDisk')]",
     "workstationName": "[concat(parameters('VMName'),'onprem')]",
     "workstationNICName": "[concat(variables('workstationName'),'-NIC')]",
@@ -56,7 +39,7 @@
     "workstationNICSubnetRef": "[concat(variables('workstationNICVnetID'), '/subnets/', variables('subnetNames')[0])]",
     "workstationPIPName": "[concat(variables('workstationName'),'-PIP')]",
     "workstationVMOSDiskName": "[concat(variables('workstationName'),'-OSDisk')]",
-    "storageName": "[concat('onpremstorage', uniqueString(resourceGroup().id))]",
+    "storageName": "[concat('ops', uniqueString(resourceGroup().id))]",
     "storageType": "Standard_LRS",
     "VMImagePublisher": "MicrosoftWindowsServer",
     "VMImageOffer": "WindowsServer",
@@ -150,11 +133,9 @@
       },
       "properties": {
         "addressSpace": {
-          "addressPrefixes": [
-            "[variables('applicationPrefixes')[0]]",
-            "[variables('applicationPrefixes')[1]]",
-            "[variables('applicationPrefixes')[2]]"
-          ]
+          "addressPrefixes": 
+            "[variables('applicationPrefixes')]"
+          
         },
         "subnets": [
           {
@@ -169,14 +150,20 @@
           {
             "name": "[variables('applicationSubnetNames')[1]]",
             "properties": {
-              "addressPrefix": "[variables('applicationPrefixes')[1]]"
+              "addressPrefix": "[variables('applicationPrefixes')[1]]",
+             "networkSecurityGroup": { "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('logisticsNSGName'))]" }
             }
           },
           {
             "name": "[variables('applicationSubnetNames')[2]]",
             "properties": {
-              "addressPrefix": "[variables('applicationPrefixes')[2]]",
-              "networkSecurityGroup": { "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('logisticsNSGName'))]" }
+              "addressPrefix": "[variables('applicationPrefixes')[2]]"
+             }
+          },
+          {
+            "name": "[variables('applicationSubnetNames')[3]]",
+            "properties": {
+              "addressPrefix": "[variables('applicationPrefixes')[3]]"
             }
           }
 
@@ -191,8 +178,7 @@
       "location": "[resourceGroup().location]",
       "apiVersion": "2016-03-30",
       "dependsOn": [
-        "[resourceId('Microsoft.Network/virtualNetworks', variables('applicationsVNetName'))]",
-        "[resourceId('Microsoft.Network/publicIPAddresses', variables('webServerPIPName'))]"
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('applicationsVNetName'))]"
       ],
       "tags": {
         "displayName": "web Server NIC"
@@ -205,9 +191,6 @@
               "privateIPAllocationMethod": "Dynamic",
               "subnet": {
                 "id": "[variables('webServerNICSubnetRef')]"
-              },
-              "publicIPAddress": {
-                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('webServerPIPName'))]"
               }
             }
           }
@@ -244,23 +227,6 @@
       }
     },
     {
-      "name": "[variables('webServerPIPName')]",
-      "type": "Microsoft.Network/publicIPAddresses",
-      "location": "[resourceGroup().location]",
-      "apiVersion": "2016-03-30",
-      "dependsOn": [],
-      "tags": {
-        "displayName": "web Server PIP"
-      },
-      "properties": {
-        "publicIPAllocationMethod": "Dynamic",
-        "dnsSettings": {
-          "domainNameonpremel": "[parameters('webServerPIPDnsName')]"
-        }
-      }
-    },
-
-    {
       "name": "[variables('workstationPIPName')]",
       "type": "Microsoft.Network/publicIPAddresses",
       "location": "[resourceGroup().location]",
@@ -270,10 +236,7 @@
         "displayName": "workstation PIP"
       },
       "properties": {
-        "publicIPAllocationMethod": "Dynamic",
-        "dnsSettings": {
-          "domainNameonpremel": "[parameters('workstationPIPDnsName')]"
-        }
+        "publicIPAllocationMethod": "Dynamic"
       }
     },
     {
@@ -524,48 +487,8 @@
         ]
       }
 
-    },
-    {
-      "apiVersion": "2016-06-01",
-      "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
-      "name": "[concat(variables('backofficeVNetName'),'/',variables('backofficePeerName'))]",
-      "location": "[resourceGroup().location]",
-      "dependsOn": [
-        "[concat('Microsoft.Network/virtualNetworks/', variables('backofficeVNetName'))]",
-        "[concat('Microsoft.Network/virtualNetworks/', variables('applicationsVNetName'))]"
-      ],
-      "comments": "This is the peering from backoffice to applications",
-      "properties": {
-        "allowVirtualNetworkAccess": "true",
-        "allowForwardedTraffic": "true",
-        "allowGatewayTransit": "true",
-        "useRemoteGateways": "false",
-        "remoteVirtualNetwork": {
-          "id": "[resourceId('Microsoft.Network/virtualNetworks',variables('applicationsVNetName'))]"
-        }
-      }
-    },
-    {
-      "apiVersion": "2016-06-01",
-      "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
-      "name": "[concat(variables('applicationsVNetName'),'/',variables('applicationPeerName'))]",
-      "location": "[resourceGroup().location]",
-      "dependsOn": [
-        "[concat('Microsoft.Network/virtualNetworks/', variables('backofficeVNetName'))]",
-        "[concat('Microsoft.Network/virtualNetworks/', variables('backofficeVNetName'),'/virtualNetworkPeerings/',variables('backofficePeerName'))]",
-        "[concat('Microsoft.Network/virtualNetworks/', variables('applicationsVNetName'))]"
-      ],
-      "comments": "This is the peering from backoffice to applications",
-      "properties": {
-        "allowVirtualNetworkAccess": "true",
-        "allowForwardedTraffic": "true",
-        "allowGatewayTransit": "false",
-        "useRemoteGateways": "true",
-        "remoteVirtualNetwork": {
-          "id": "[resourceId('Microsoft.Network/virtualNetworks',variables('backofficeVNetName'))]"
-        }
-      }
     }
+
   ],
   "outputs": {}
 }

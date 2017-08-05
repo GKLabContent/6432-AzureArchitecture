@@ -14,6 +14,9 @@
     "backofficeVNetName": "backoffice-VNET",
     "backofficeVnetID": "[resourceId('Microsoft.Network/virtualNetworks', variables('backofficeVNetName'))]",
     "backofficeSubnetRef": "[concat(variables('backofficeVnetID'), '/subnets/GatewaySubnet')]",
+    "applicationsVNetName": "applications-VNET",
+    "backofficePeerName": "backoffice-app-PEER",
+    "applicationPeerName": "app-backoffice-PEER",
 
     "labGatewayName": "workstation-GWAY",
     "labGatewayPIP": "[concat(variables('labGatewayName'),'-PIP')]",
@@ -164,6 +167,45 @@
         "enableBgp": false,
         "usePolicyBasedTrafficSelectors": false,
         "ipsecPolicies": []
+      }
+    },
+    {
+      "apiVersion": "2016-06-01",
+      "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+      "name": "[concat(variables('backofficeVNetName'),'/',variables('backofficePeerName'))]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworkGateways', variables('backofficeGatewayName'))]"
+      ],
+
+      "comments": "This is the peering from backoffice to applications",
+      "properties": {
+        "allowVirtualNetworkAccess": "true",
+        "allowForwardedTraffic": "true",
+        "allowGatewayTransit": "true",
+        "useRemoteGateways": "false",
+        "remoteVirtualNetwork": {
+          "id": "[resourceId('Microsoft.Network/virtualNetworks',variables('applicationsVNetName'))]"
+        }
+      }
+    },
+    {
+      "apiVersion": "2016-06-01",
+      "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+      "name": "[concat(variables('applicationsVNetName'),'/',variables('applicationPeerName'))]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat(resourceId('Microsoft.Network/virtualNetworks/', variables('backofficeVNetName')),'/virtualNetworkPeerings/',variables('backofficePeerName'))]"
+      ],
+      "comments": "This is the peering from backoffice to applications",
+      "properties": {
+        "allowVirtualNetworkAccess": "true",
+        "allowForwardedTraffic": "true",
+        "allowGatewayTransit": "false",
+        "useRemoteGateways": "true",
+        "remoteVirtualNetwork": {
+          "id": "[resourceId('Microsoft.Network/virtualNetworks',variables('backofficeVNetName'))]"
+        }
       }
     }
   ]

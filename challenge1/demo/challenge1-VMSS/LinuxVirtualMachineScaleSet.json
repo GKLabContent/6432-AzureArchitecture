@@ -1,0 +1,453 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+
+    "vmssName": {
+      "type": "string",
+      "metadata": {
+        "description": "DNS name used for public IP addresses and as base for naming other resources. Must be globally unique and 3 to 61 characters long."
+      },
+      "minLength": 3,
+      "maxLength": 61
+    },
+
+    "adminUsername": {
+      "type": "string",
+      "minLength": 1,
+      "metadata": {
+        "description": "Administrator username on all VMs"
+      }
+    },
+    "adminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Administrator password on all VMs"
+      }
+    }
+  },
+  "variables": {
+    "applicationSubnetNames": [ "web", "logistics", "GatewaySubnet" ],
+    "applicationsVNetName": "applications-VNET",
+    "vmSize": "Standard_A1",
+    "instanceCount": 1,
+    "location": "[resourceGroup().location]",
+    "storageAccountType": "Standard_LRS",
+    "namingInfix": "[toLower(substring(concat(parameters('vmssName'), uniqueString(resourceGroup().id)), 0, 9))]",
+    "longNamingInfix": "[toLower(parameters('vmssName'))]",
+
+    "publicIPAddressName": "[concat(variables('namingInfix'), 'pip')]",
+    "loadBalancerName": "[concat(variables('namingInfix'), 'lb')]",
+    "publicIPAddressID": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName'))]",
+    "lbID": "[resourceId('Microsoft.Network/loadBalancers', variables('loadBalancerName'))]",
+    "natPoolName": "[concat(variables('namingInfix'), 'natpool')]",
+    "bePoolName": "[concat(variables('namingInfix'), 'bepool')]",
+    "nicName": "[concat(variables('namingInfix'), 'nic')]",
+    "ipConfigName": "[concat(variables('namingInfix'), 'ipconfig')]",
+    "frontEndIPConfigID": "[concat(variables('lbID'), '/frontendIPConfigurations/loadBalancerFrontEnd')]",
+    "osType": {
+      "publisher": "Canonical",
+      "offer": "UbuntuServer",
+      "sku": "16.04-LTS",
+      "version": "latest"
+    },
+    "imageReference": "[variables('osType')]",
+    "diagnosticsStorageAccountName": "[concat('gk6432', uniqueString(resourceGroup().id))]",
+    "ladMetricsResourceId": "[resourceId('Microsoft.Compute/virtualMachineScaleSets', variables('namingInfix'))]"
+  },
+  "resources": [
+
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "name": "[variables('publicIPAddressName')]",
+      "location": "[variables('location')]",
+      "apiVersion": "2016-03-30",
+      "tags": {
+        "displayName": "PublicIP"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Dynamic",
+        "dnsSettings": {
+          "domainNameLabel": "[variables('longNamingInfix')]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/loadBalancers",
+      "name": "[variables('loadBalancerName')]",
+      "location": "[variables('location')]",
+      "apiVersion": "2016-03-30",
+      "tags": {
+        "displayName": "LoadBalancer"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName'))]"
+      ],
+      "properties": {
+        "frontendIPConfigurations": [
+          {
+            "name": "LoadBalancerFrontEnd",
+            "properties": {
+              "publicIPAddress": {
+                "id": "[variables('publicIPAddressID')]"
+              }
+            }
+          }
+        ],
+        "backendAddressPools": [
+          {
+            "name": "[variables('bePoolName')]"
+          }
+        ],
+        "inboundNatPools": [
+          {
+            "name": "[variables('natPoolName')]",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[variables('frontEndIPConfigID')]"
+              },
+              "protocol": "tcp",
+              "frontendPortRangeStart": 50000,
+              "frontendPortRangeEnd": 50099,
+              "backendPort": 22
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachineScaleSets",
+      "name": "[variables('namingInfix')]",
+      "location": "[variables('location')]",
+      "apiVersion": "2017-03-30",
+      "tags": {
+        "displayName": "VMScaleSet"
+      },
+      "dependsOn": [
+        "[variables('lbID')]",
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('applicationsVNetName'))]"
+      ],
+      "sku": {
+        "name": "[variables('vmSize')]",
+        "tier": "Standard",
+        "capacity": "[variables('instanceCount')]"
+      },
+      "properties": {
+        "overprovision": "true",
+        "upgradePolicy": {
+          "mode": "Manual"
+        },
+        "virtualMachineProfile": {
+          "storageProfile": {
+            "osDisk": {
+              "caching": "ReadOnly",
+              "createOption": "FromImage"
+            },
+            "imageReference": "[variables('imageReference')]"
+          },
+          "osProfile": {
+            "computerNamePrefix": "[variables('namingInfix')]",
+            "adminUsername": "[parameters('adminUsername')]",
+            "adminPassword": "[parameters('adminPassword')]"
+          },
+          "networkProfile": {
+            "networkInterfaceConfigurations": [
+              {
+                "name": "[variables('nicName')]",
+                "properties": {
+                  "primary": true,
+                  "ipConfigurations": [
+                    {
+                      "name": "[variables('ipConfigName')]",
+                      "properties": {
+                        "subnet": {
+                          "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', variables('applicationsVNetName')), '/subnets/', variables('applicationSubnetNames')[0])]"
+                        },
+                        "loadBalancerBackendAddressPools": [
+                          {
+                            "id": "[concat(variables('lbID'), '/backendAddressPools/', variables('bePoolName'))]"
+                          }
+                        ],
+                        "loadBalancerInboundNatPools": [
+                          {
+                            "id": "[concat(variables('lbID'), '/inboundNatPools/', variables('natPoolName'))]"
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "extensionProfile": {
+            "extensions": [
+              {
+                "name": "AzureDiagnostics",
+                "properties": {
+                  "publisher": "Microsoft.OSTCExtensions",
+                  "type": "LinuxDiagnostic",
+                  "typeHandlerVersion": "2.3",
+                  "autoUpgradeMinorVersion": true,
+                  "settings": {
+                    "ladCfg": {
+                      "diagnosticMonitorConfiguration": {
+                        "performanceCounters": {
+                          "performanceCounterConfiguration": [
+                            {
+                              "namespace": "root/scx",
+                              "class": "Memory",
+                              "counterSpecifier": "AvailableMemory",
+                              "table": "LinuxMemory"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "Memory",
+                              "counterSpecifier": "PercentAvailableMemory",
+                              "table": "LinuxMemory"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "Memory",
+                              "counterSpecifier": "UsedMemory",
+                              "table": "LinuxMemory"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "Memory",
+                              "counterSpecifier": "PercentUsedMemory",
+                              "table": "LinuxMemory"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "Memory",
+                              "counterSpecifier": "PercentUsedByCache",
+                              "table": "LinuxMemory"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "Memory",
+                              "counterSpecifier": "PagesPerSec",
+                              "table": "LinuxMemory"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "Memory",
+                              "counterSpecifier": "PagesReadPerSec",
+                              "table": "LinuxMemory"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "Memory",
+                              "counterSpecifier": "PagesWrittenPerSec",
+                              "table": "LinuxMemory"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "Memory",
+                              "counterSpecifier": "AvailableSwap",
+                              "table": "LinuxMemory"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "Memory",
+                              "counterSpecifier": "PercentAvailableSwap",
+                              "table": "LinuxMemory"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "Memory",
+                              "counterSpecifier": "UsedSwap",
+                              "table": "LinuxMemory"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "Memory",
+                              "counterSpecifier": "PercentUsedSwap",
+                              "table": "LinuxMemory"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "Processor",
+                              "counterSpecifier": "PercentIdleTime",
+                              "table": "LinuxProcessor"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "Processor",
+                              "counterSpecifier": "PercentUserTime",
+                              "table": "LinuxProcessor"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "Processor",
+                              "counterSpecifier": "PercentNiceTime",
+                              "table": "LinuxProcessor"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "Processor",
+                              "counterSpecifier": "PercentPrivilegedTime",
+                              "table": "LinuxProcessor"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "Processor",
+                              "counterSpecifier": "PercentInterruptTime",
+                              "table": "LinuxProcessor"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "Processor",
+                              "counterSpecifier": "PercentDPCTime",
+                              "table": "LinuxProcessor"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "Processor",
+                              "counterSpecifier": "PercentProcessorTime",
+                              "table": "LinuxProcessor"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "Processor",
+                              "counterSpecifier": "PercentIOWaitTime",
+                              "table": "LinuxProcessor"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "PhysicalDisk",
+                              "counterSpecifier": "BytesPerSecond",
+                              "table": "LinuxPhysicalDisk"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "PhysicalDisk",
+                              "counterSpecifier": "ReadBytesPerSecond",
+                              "table": "LinuxPhysicalDisk"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "PhysicalDisk",
+                              "counterSpecifier": "WriteBytesPerSecond",
+                              "table": "LinuxPhysicalDisk"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "PhysicalDisk",
+                              "counterSpecifier": "TransfersPerSecond",
+                              "table": "LinuxPhysicalDisk"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "PhysicalDisk",
+                              "counterSpecifier": "ReadsPerSecond",
+                              "table": "LinuxPhysicalDisk"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "PhysicalDisk",
+                              "counterSpecifier": "WritesPerSecond",
+                              "table": "LinuxPhysicalDisk"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "PhysicalDisk",
+                              "counterSpecifier": "AverageReadTime",
+                              "table": "LinuxPhysicalDisk"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "PhysicalDisk",
+                              "counterSpecifier": "AverageWriteTime",
+                              "table": "LinuxPhysicalDisk"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "PhysicalDisk",
+                              "counterSpecifier": "AverageTransferTime",
+                              "table": "LinuxPhysicalDisk"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "PhysicalDisk",
+                              "counterSpecifier": "AverageDiskQueueLength",
+                              "table": "LinuxPhysicalDisk"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "NetworkInterface",
+                              "counterSpecifier": "BytesTransmitted",
+                              "table": "LinuxNetworkInterface"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "NetworkInterface",
+                              "counterSpecifier": "BytesReceived",
+                              "table": "LinuxNetworkInterface"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "NetworkInterface",
+                              "counterSpecifier": "PacketsTransmitted",
+                              "table": "LinuxNetworkInterface"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "NetworkInterface",
+                              "counterSpecifier": "PacketsReceived",
+                              "table": "LinuxNetworkInterface"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "NetworkInterface",
+                              "counterSpecifier": "BytesTotal",
+                              "table": "LinuxNetworkInterface"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "NetworkInterface",
+                              "counterSpecifier": "TotalRxErrors",
+                              "table": "LinuxNetworkInterface"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "NetworkInterface",
+                              "counterSpecifier": "TotalTxErrors",
+                              "table": "LinuxNetworkInterface"
+                            },
+                            {
+                              "namespace": "root/scx",
+                              "class": "NetworkInterface",
+                              "counterSpecifier": "TotalCollisions",
+                              "table": "LinuxNetworkInterface"
+                            }
+                          ]
+                        },
+                        "metrics": {
+                          "resourceId": "[variables('ladMetricsResourceId')]",
+                          "metricAggregation": [
+                            {
+                              "scheduledTransferPeriod": "PT1H"
+                            },
+                            {
+                              "scheduledTransferPeriod": "PT1M"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  "protectedSettings": {
+                    "storageAccountName": "[variables('diagnosticsStorageAccountName')]",
+                    "storageAccountKey": "[listkeys(resourceId('Microsoft.Storage/storageAccounts', variables('diagnosticsStorageAccountName')), '2016-01-01').keys[0].value]"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

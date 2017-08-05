@@ -29,6 +29,10 @@
     <Content Include="challenge1-network.parameters.json" />
     <Content Include="challenge1-connections.json" />
     <Content Include="challenge1-connections.parameters.json" />
+    <Content Include="LinuxVirtualMachineScaleSet.json" />
+    <Content Include="LinuxVirtualMachineScaleSet.parameters.json" />
+    <Content Include="challenge1-appgateway.json" />
+    <Content Include="challenge1-appGateway.parameters.json" />
     <None Include="Deployment.targets">
       <Visible>False</Visible>
     </None>
