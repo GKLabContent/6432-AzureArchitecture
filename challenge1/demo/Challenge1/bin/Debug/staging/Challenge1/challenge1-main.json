@@ -1,0 +1,99 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "VMName": {
+      "type": "string",
+      "minLength": 1,
+      "metadata": {
+        "displayName": "Virtual machine name prefix (used for web server and workstation)"
+      }
+    },
+    "AdminUserName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "AdminPassword": {
+      "type": "securestring"
+    }
+  },
+  "variables": {
+    "templateBaseUrl": "https://raw.githubusercontent.com/GKLabContent/6432-AzureArchitecture/master/challenge1/demo/Challenge1/",
+    "networkTemplateFile": "[concat(variables('templateBaseUrl'),'challenge1-network.json')]",
+    "connectionTemplateFile": "[concat(variables('templateBaseUrl'),'challenge1-connections.json')]",
+    "vmssTemplateFile": "[concat(variables('templateBaseUrl'),'LinuxVirtualMachineScaleSet.json')]",
+    "appLoadBalancerTemplateFile": "[concat(variables('templateBaseUrl'),'challenge1-appgateway.json')]",
+    "networkTemplateName": "networkTemplate",
+    "connectionTemplateName": "connectionTemplate",
+    "appLoadBalancerName": "appLbTemplate",
+    "vmssTemplateName": "vmssTemplate",
+    "networkTemplateId": "[resourceId('Microsoft.Resources/deployments',variables('networkTemplateName'))]",
+    "vmssName": "[concat(parameters('VMName'),'SS')]"
+  },
+  "resources": [
+    {
+      "apiVersion": "2017-05-10",
+      "name": "[variables('networkTemplateName')]",
+      "type": "Microsoft.Resources/deployments",
+      "properties": {
+        "mode": "incremental",
+        "templateLink": {
+          "uri": "[variables('networkTemplateFile')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "VMName": { "value": "[parameters('VMName')]" },
+          "AdminPassword": { "value": "[parameters('AdminPassword')]" },
+          "AdminUserName": { "value": "[parameters('AdminUserName')]" }
+        }
+      }
+    },
+    {
+      "apiVersion": "2017-05-10",
+      "name": "[variables('connectionTemplateName')]",
+      "type": "Microsoft.Resources/deployments",
+      "dependsOn": [ "[variables('networkTemplateId')]" ],
+      "properties": {
+        "mode": "incremental",
+        "templateLink": {
+          "uri": "[variables('connectionTemplateFile')]",
+          "contentVersion": "1.0.0.0"
+        }
+      }
+    },
+    {
+      "apiVersion": "2017-05-10",
+      "name": "[variables('vmssTemplateName')]",
+      "type": "Microsoft.Resources/deployments",
+      "dependsOn": [ "[variables('networkTemplateId')]" ],
+      "properties": {
+        "mode": "incremental",
+        "templateLink": {
+          "uri": "[variables('vmssTemplateFile')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "vmssName": { "value": "[variables('vmssName')]" },
+          "adminPassword": { "value": "[parameters('AdminPassword')]" },
+          "adminUsername": { "value": "[parameters('AdminUserName')]" }
+        }
+      }
+    },
+    {
+      "apiVersion": "2017-05-10",
+      "name": "[variables('appLoadBalancerName')]",
+      "type": "Microsoft.Resources/deployments",
+      "dependsOn": [ "[variables('networkTemplateId')]" ],
+      "properties": {
+        "mode": "incremental",
+        "templateLink": {
+          "uri": "[variables('appLoadBalancerTemplateFile')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+        }
+      }
+    }
+  ], 
+  "outputs" : {
+}}

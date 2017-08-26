@@ -147,7 +147,7 @@
                       "name": "[variables('ipConfigName')]",
                       "properties": {
                         "subnet": {
-                          "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', variables('applicationsVNetName')), '/subnets/', variables('applicationSubnetNames')[0])]"
+                          "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', variables('applicationsVNetName')), '/subnets/', variables('applicationSubnetNames')[1])]"
                         },
                         "loadBalancerBackendAddressPools": [
                           {

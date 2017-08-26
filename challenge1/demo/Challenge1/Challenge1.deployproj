@@ -33,6 +33,8 @@
     <Content Include="LinuxVirtualMachineScaleSet.parameters.json" />
     <Content Include="challenge1-appgateway.json" />
     <Content Include="challenge1-appGateway.parameters.json" />
+    <Content Include="challenge1-main.json" />
+    <Content Include="challenge1-main.parameters.json" />
     <None Include="Deployment.targets">
       <Visible>False</Visible>
     </None>
