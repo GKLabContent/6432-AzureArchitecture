@@ -1,0 +1,599 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Microsoft.Azure.Batch.Conventions.Files</name>
+    </assembly>
+    <members>
+        <member name="T:Microsoft.Azure.Batch.Conventions.Files.CloudJobExtensions">
+            <summary>
+            Provides methods for working with the outputs of a <see cref="T:Microsoft.Azure.Batch.CloudJob"/>.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.CloudJobExtensions.OutputStorage(Microsoft.Azure.Batch.CloudJob,Microsoft.WindowsAzure.Storage.CloudStorageAccount)">
+            <summary>
+            Gets the <see cref="T:Microsoft.Azure.Batch.Conventions.Files.JobOutputStorage"/> for a specified <see cref="T:Microsoft.Azure.Batch.CloudJob"/>.
+            </summary>
+            <param name="job">The job for which to get output storage.</param>
+            <param name="storageAccount">The storage account linked to the Azure Batch account.</param>
+            <returns>A JobOutputStorage for the specified job.</returns>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.CloudJobExtensions.PrepareOutputStorageAsync(Microsoft.Azure.Batch.CloudJob,Microsoft.WindowsAzure.Storage.CloudStorageAccount,System.Threading.CancellationToken)">
+            <summary>
+            Creates an Azure blob storage container for the outputs of a <see cref="T:Microsoft.Azure.Batch.CloudJob"/>.
+            </summary>
+            <param name="job">The job for which to create the container.</param>
+            <param name="storageAccount">The storage account linked to the Azure Batch account.</param>
+            <param name="cancellationToken">A <see cref="T:System.Threading.CancellationToken"/> for controlling the lifetime of the asynchronous operation.</param>
+            <returns>A <see cref="T:System.Threading.Tasks.Task"/> that represents the asynchronous operation.</returns>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.CloudJobExtensions.GetOutputStorageContainerUrl(Microsoft.Azure.Batch.CloudJob,Microsoft.WindowsAzure.Storage.CloudStorageAccount)">
+            <summary>
+            Gets the URL, including a Shared Access Signature (SAS) that permits writing, for the job's
+            output storage container in Azure blob storage. This URL is suitable for passing to tasks
+            so they can use the <see cref="M:Microsoft.Azure.Batch.Conventions.Files.JobOutputStorage.#ctor(System.Uri)"/> or
+            <see cref="M:Microsoft.Azure.Batch.Conventions.Files.TaskOutputStorage.#ctor(System.Uri,System.String)"/> constructors that take a <see cref="T:System.Uri"/>.
+            </summary>
+            <param name="job">The job for which to create the container.</param>
+            <param name="storageAccount">The storage account linked to the Azure Batch account.</param>
+            <returns>The URL, including SAS, of the job output container.</returns>
+            <remarks>The SAS expires after 7 days. This default is chosen to match the maximum time that
+            tasks can remain active.</remarks>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.CloudJobExtensions.GetOutputStorageContainerUrl(Microsoft.Azure.Batch.CloudJob,Microsoft.WindowsAzure.Storage.CloudStorageAccount,System.TimeSpan)">
+            <summary>
+            Gets the URL, including a Shared Access Signature (SAS) that permits writing, for the job's
+            output storage container in Azure blob storage. This URL is suitable for passing to tasks
+            so they can use the <see cref="M:Microsoft.Azure.Batch.Conventions.Files.JobOutputStorage.#ctor(System.Uri)"/> or
+            <see cref="M:Microsoft.Azure.Batch.Conventions.Files.TaskOutputStorage.#ctor(System.Uri,System.String)"/> constructors that take a <see cref="T:System.Uri"/>.
+            </summary>
+            <param name="job">The job for which to create the container.</param>
+            <param name="storageAccount">The storage account linked to the Azure Batch account.</param>
+            <param name="expiryTime">The duration for which the SAS is valid.  This should be long enough
+            to allow all tasks of the job to be created and run to completion, including leeway for errors
+            and retries.</param>
+            <returns>The URL, including SAS, of the job output container.</returns>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.CloudJobExtensions.OutputStorageContainerName(Microsoft.Azure.Batch.CloudJob)">
+            <summary>
+            Gets the name of the Azure blob storage container for the outputs of a <see cref="T:Microsoft.Azure.Batch.CloudJob"/>.
+            </summary>
+            <param name="job">The job for which to get the container name.</param>
+            <returns>The name of the container in which to save the outputs of this job.</returns>
+        </member>
+        <member name="T:Microsoft.Azure.Batch.Conventions.Files.CloudTaskExtensions">
+            <summary>
+            Provides methods for working with the outputs of a <see cref="T:Microsoft.Azure.Batch.CloudTask"/>.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.CloudTaskExtensions.OutputStorage(Microsoft.Azure.Batch.CloudTask,Microsoft.WindowsAzure.Storage.CloudStorageAccount)">
+            <summary>
+            Gets the <see cref="T:Microsoft.Azure.Batch.Conventions.Files.TaskOutputStorage"/> for a specified <see cref="T:Microsoft.Azure.Batch.CloudTask"/>.
+            </summary>
+            <param name="task">The task for which to get output storage.</param>
+            <param name="storageAccount">The storage account linked to the Azure Batch account.</param>
+            <returns>A TaskOutputStorage for the specified task.</returns>
+        </member>
+        <member name="T:Microsoft.Azure.Batch.Conventions.Files.ITrackedSaveOperation">
+            <summary>
+            Represents a tracked save, in which a background operation periodically copies appends
+            to a file to the corresponding append blob in Azure Storage.
+            </summary>
+            <seealso cref="M:Microsoft.Azure.Batch.Conventions.Files.TaskOutputStorage.SaveTrackedAsync(Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind,System.String,System.String,System.TimeSpan)"/>
+        </member>
+        <member name="E:Microsoft.Azure.Batch.Conventions.Files.ITrackedSaveOperation.FlushError">
+            <summary>
+            Occurs when there is an error while performing a background append to the blob in Azure Storage.
+            </summary>
+            <remarks>
+            <para>
+            If an error occurs while appending, the 'last position' is not updated, so the data that
+            could not be appended will be included in the next flush.
+            </para>
+            <para>
+            This event is not raised if an error occurs during <see cref="M:System.IDisposable.Dispose"/>; instead,
+            the Dispose method method re-throws the exception directly. In this case, the background
+            appends are no longer running, so it is up to the calling code to decide whether and how to
+            save the unflushed data (for example, re-saving the file using the non-tracking methods).
+            </para>
+            </remarks>
+        </member>
+        <member name="T:Microsoft.Azure.Batch.Conventions.Files.JobOutputKind">
+            <summary>
+            Represents a category of job outputs, such as the main job output, or a preview of the
+            job output.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Azure.Batch.Conventions.Files.JobOutputKind.JobOutput">
+            <summary>
+            A <see cref="T:Microsoft.Azure.Batch.Conventions.Files.JobOutputKind"/> representing the main output of a job.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Azure.Batch.Conventions.Files.JobOutputKind.JobPreview">
+            <summary>
+            A <see cref="T:Microsoft.Azure.Batch.Conventions.Files.JobOutputKind"/> representing a preview of the job output.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.JobOutputKind.Custom(System.String)">
+            <summary>
+            Gets a <see cref="T:Microsoft.Azure.Batch.Conventions.Files.JobOutputKind"/> representing a custom category of job outputs.
+            </summary>
+            <param name="text">A text identifier for the custom JobOutputKind.</param>
+            <returns>A JobOutputKind with the specified text.</returns>
+            <exception cref="T:System.ArgumentNullException"><paramref name="text"/> is null.</exception>
+            <exception cref="T:System.ArgumentException"><paramref name="text"/> is empty.</exception>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.JobOutputKind.ToString">
+            <summary>
+            Returns a string that represents the current object.
+            </summary>
+            <returns>A textual representation of the <see cref="T:Microsoft.Azure.Batch.Conventions.Files.JobOutputKind"/>.</returns>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.JobOutputKind.Equals(Microsoft.Azure.Batch.Conventions.Files.JobOutputKind)">
+            <summary>
+            Determinates whether this instance and another specified <see cref="T:Microsoft.Azure.Batch.Conventions.Files.JobOutputKind"/>
+            have the same value.
+            </summary>
+            <param name="other">The JobOutputKind to compare to this instance.</param>
+            <returns>true if the value of the <paramref name="other"/> parameter is the same as
+            the value of this instance; otherwise, false.</returns>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.JobOutputKind.Equals(System.Object)">
+            <summary>
+            Determines whether the specified object is equal to the current object.
+            </summary>
+            <param name="obj">The object to compare with the current object.</param>
+            <returns>true if the specified object is equal to the current object; otherwise, false.</returns>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.JobOutputKind.GetHashCode">
+            <summary>
+            Returns the hash code for this <see cref="T:Microsoft.Azure.Batch.Conventions.Files.JobOutputKind"/>.
+            </summary>
+            <returns>A 32-bit signed integer hash code.</returns>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.JobOutputKind.op_Equality(Microsoft.Azure.Batch.Conventions.Files.JobOutputKind,Microsoft.Azure.Batch.Conventions.Files.JobOutputKind)">
+            <summary>
+            Determines whether two specified <see cref="T:Microsoft.Azure.Batch.Conventions.Files.JobOutputKind"/> instances have the same value.
+            </summary>
+            <param name="x">The first JobOutputKind to compare.</param>
+            <param name="y">The second JobOutputKind to compare.</param>
+            <returns>true if the value of <paramref name="x"/> is the same as the value of <paramref name="y"/>; otherwise, false.</returns>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.JobOutputKind.op_Inequality(Microsoft.Azure.Batch.Conventions.Files.JobOutputKind,Microsoft.Azure.Batch.Conventions.Files.JobOutputKind)">
+            <summary>
+            Determines whether two specified <see cref="T:Microsoft.Azure.Batch.Conventions.Files.JobOutputKind"/> instances have different values.
+            </summary>
+            <param name="x">The first JobOutputKind to compare.</param>
+            <param name="y">The second JobOutputKind to compare.</param>
+            <returns>true if the value of <paramref name="x"/> is different from the value of <paramref name="y"/>; otherwise, false.</returns>
+        </member>
+        <member name="T:Microsoft.Azure.Batch.Conventions.Files.JobOutputStorage">
+            <summary>
+            Represents persistent storage for the outputs of an Azure Batch job.
+            </summary>
+            <remarks>
+            Job outputs refer to output data logically associated with the entire job, rather than
+            a particular task. For example, in a movie rendering job, if a task combined all the frames
+            into a movie, that would logically be a job output. The purpose of categorising an
+            output as a 'job' output is to save the client from having to know which task produced it.
+            </remarks>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.JobOutputStorage.#ctor(System.Uri)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Microsoft.Azure.Batch.Conventions.Files.JobOutputStorage"/> class from a URL representing
+            the job output container.
+            </summary>
+            <param name="jobOutputContainerUri">The URL in Azure storage of the blob container to
+            use for job outputs. This URL must contain a SAS (Shared Access Signature) granting
+            access to the container, or the container must be public.</param>
+            <remarks>The container must already exist; the JobOutputStorage class does not create
+            it for you.</remarks>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.JobOutputStorage.#ctor(Microsoft.WindowsAzure.Storage.CloudStorageAccount,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Microsoft.Azure.Batch.Conventions.Files.JobOutputStorage"/> class from a storage account
+            and job id.
+            </summary>
+            <param name="storageAccount">The storage account linked to the Azure Batch account.</param>
+            <param name="jobId">The id of the Azure Batch job.</param>
+            <remarks>The job output container must already exist; the JobOutputStorage class does not create
+            it for you.</remarks>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.JobOutputStorage.#ctor(System.Uri,Microsoft.WindowsAzure.Storage.RetryPolicies.IRetryPolicy)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Microsoft.Azure.Batch.Conventions.Files.JobOutputStorage"/> class from a URL representing
+            the job output container.
+            </summary>
+            <param name="jobOutputContainerUri">The URL in Azure storage of the blob container to
+            use for job outputs. This URL must contain a SAS (Shared Access Signature) granting
+            access to the container, or the container must be public.</param>
+            <param name="storageRetryPolicy">The retry policy for storage requests.</param>
+            <remarks>The container must already exist; the JobOutputStorage class does not create
+            it for you.</remarks>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.JobOutputStorage.#ctor(Microsoft.WindowsAzure.Storage.CloudStorageAccount,System.String,Microsoft.WindowsAzure.Storage.RetryPolicies.IRetryPolicy)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Microsoft.Azure.Batch.Conventions.Files.JobOutputStorage"/> class from a storage account
+            and job id.
+            </summary>
+            <param name="storageAccount">The storage account linked to the Azure Batch account.</param>
+            <param name="jobId">The id of the Azure Batch job.</param>
+            <param name="storageRetryPolicy">The retry policy for storage requests.</param>
+            <remarks>The job output container must already exist; the JobOutputStorage class does not create
+            it for you.</remarks>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.JobOutputStorage.SaveAsync(Microsoft.Azure.Batch.Conventions.Files.JobOutputKind,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Saves the specified file to persistent storage.
+            </summary>
+            <param name="kind">A <see cref="T:Microsoft.Azure.Batch.Conventions.Files.JobOutputKind"/> representing the category under which to
+            store this file, for example <see cref="F:Microsoft.Azure.Batch.Conventions.Files.JobOutputKind.JobOutput"/> or <see cref="F:Microsoft.Azure.Batch.Conventions.Files.JobOutputKind.JobPreview"/>.</param>
+            <param name="relativePath">The path of the file to save, relative to the current directory.
+            If the file is in a subdirectory of the current directory, the relative path will be preserved
+            in blob storage.</param>
+            <param name="cancellationToken">A <see cref="T:System.Threading.CancellationToken"/> for controlling the lifetime of the asynchronous operation.</param>
+            <returns>A <see cref="T:System.Threading.Tasks.Task"/> that represents the asynchronous operation.</returns>
+            <remarks>If the file is outside the current directory, traversals up the directory tree are removed.
+            For example, a <paramref name="relativePath"/> of "..\ProcessEnv.cmd" would be treated as "ProcessEnv.cmd"
+            for the purposes of creating a blob name.</remarks>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="kind"/> or <paramref name="relativePath"/> argument is null.</exception>
+            <exception cref="T:System.ArgumentException">The <paramref name="relativePath"/> argument is an absolute path, or is empty.</exception>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.JobOutputStorage.SaveAsync(Microsoft.Azure.Batch.Conventions.Files.JobOutputKind,System.String,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Saves the specified file to persistent storage.
+            </summary>
+            <param name="kind">A <see cref="T:Microsoft.Azure.Batch.Conventions.Files.JobOutputKind"/> representing the category under which to
+            store this file, for example <see cref="F:Microsoft.Azure.Batch.Conventions.Files.JobOutputKind.JobOutput"/> or <see cref="F:Microsoft.Azure.Batch.Conventions.Files.JobOutputKind.JobPreview"/>.</param>
+            <param name="sourcePath">The path of the file to save.</param>
+            <param name="destinationRelativePath">The blob name under which to save the file. This may include a
+            relative component, such as "pointclouds/pointcloud_0001.txt".</param>
+            <param name="cancellationToken">A <see cref="T:System.Threading.CancellationToken"/> for controlling the lifetime of the asynchronous operation.</param>
+            <returns>A <see cref="T:System.Threading.Tasks.Task"/> that represents the asynchronous operation.</returns>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="kind"/>, <paramref name="sourcePath"/>, or <paramref name="destinationRelativePath"/> argument is null.</exception>
+            <exception cref="T:System.ArgumentException">The <paramref name="sourcePath"/> or <paramref name="destinationRelativePath"/> argument is empty.</exception>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.JobOutputStorage.ListOutputs(Microsoft.Azure.Batch.Conventions.Files.JobOutputKind)">
+            <summary>
+            Lists the job outputs of the specified kind.
+            </summary>
+            <param name="kind">A <see cref="T:Microsoft.Azure.Batch.Conventions.Files.JobOutputKind"/> representing the category of outputs to
+            list, for example <see cref="F:Microsoft.Azure.Batch.Conventions.Files.JobOutputKind.JobOutput"/> or <see cref="F:Microsoft.Azure.Batch.Conventions.Files.JobOutputKind.JobPreview"/>.</param>
+            <returns>A list of persisted job outputs of the specified kind.</returns>
+            <remarks>The list is retrieved lazily from Azure blob storage when it is enumerated.</remarks>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.JobOutputStorage.GetOutputAsync(Microsoft.Azure.Batch.Conventions.Files.JobOutputKind,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Retrieves a job output from Azure blob storage by kind and path.
+            </summary>
+            <param name="kind">A <see cref="T:Microsoft.Azure.Batch.Conventions.Files.JobOutputKind"/> representing the category of the output to
+            retrieve, for example <see cref="F:Microsoft.Azure.Batch.Conventions.Files.JobOutputKind.JobOutput"/> or <see cref="F:Microsoft.Azure.Batch.Conventions.Files.JobOutputKind.JobPreview"/>.</param>
+            <param name="filePath">The path under which the output was persisted in blob storage.</param>
+            <param name="cancellationToken">A <see cref="T:System.Threading.CancellationToken"/> for controlling the lifetime of the asynchronous operation.</param>
+            <returns>A reference to the requested file in Azure blob storage.</returns>
+        </member>
+        <member name="T:Microsoft.Azure.Batch.Conventions.Files.OutputFileReference">
+            <summary>
+            A reference to a task or job output file in persistent storage.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Azure.Batch.Conventions.Files.OutputFileReference.FilePath">
+            <summary>
+            Gets the path under which the file was stored.
+            </summary>
+            <remarks>If the file was stored under a directory path, the FilePath property uses the directory
+            separator of the underlying blob storage (for example, mydirectory/myfile.txt). Such paths may
+            not be directly usable as Windows paths.</remarks>
+        </member>
+        <member name="P:Microsoft.Azure.Batch.Conventions.Files.OutputFileReference.Uri">
+            <summary>
+            Gets the URI of the file in persistent storage.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Azure.Batch.Conventions.Files.OutputFileReference.CloudBlob">
+            <summary>
+            Gets a reference to the underlying <see cref="T:Microsoft.WindowsAzure.Storage.Blob.ICloudBlob"/> object representing the
+            file in persistent storage. This can be used to invoke blob methods or overloads not surfaced
+            by the <see cref="T:Microsoft.Azure.Batch.Conventions.Files.OutputFileReference"/> abstraction.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.OutputFileReference.DownloadToFileAsync(System.String,System.IO.FileMode,System.Threading.CancellationToken)">
+            <summary>
+            Downloads the contents of the file to a specified path.
+            </summary>
+            <param name="path">The path to which to download the file.</param>
+            <param name="mode">Specifies how to open or create the file.</param>
+            <param name="cancellationToken">A <see cref="T:System.Threading.CancellationToken"/> for controlling the lifetime of the asynchronous operation.</param>
+            <returns>A <see cref="T:System.Threading.Tasks.Task"/> that represents the asynchronous operation.</returns>
+            <seealso cref="M:Microsoft.WindowsAzure.Storage.Blob.ICloudBlob.DownloadToFileAsync(System.String,System.IO.FileMode)"/>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.OutputFileReference.DownloadToStreamAsync(System.IO.Stream,System.Threading.CancellationToken)">
+            <summary>
+            Downloads the contents of the file to a stream.
+            </summary>
+            <param name="target">The target stream.</param>
+            <param name="cancellationToken">A <see cref="T:System.Threading.CancellationToken"/> for controlling the lifetime of the asynchronous operation.</param>
+            <returns>A <see cref="T:System.Threading.Tasks.Task"/> that represents the asynchronous operation.</returns>
+            <seealso cref="M:Microsoft.WindowsAzure.Storage.Blob.ICloudBlob.DownloadToStreamAsync(System.IO.Stream)"/>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.OutputFileReference.DownloadToByteArrayAsync(System.Byte[],System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Downloads the contents of the file to a byte array.
+            </summary>
+            <param name="target">The target byte array.</param>
+            <param name="index">The starting offset in the byte array</param>
+            <param name="cancellationToken">A <see cref="T:System.Threading.CancellationToken"/> for controlling the lifetime of the asynchronous operation.</param>
+            <returns>The total number of bytes read into the buffer.</returns>
+            <seealso cref="M:Microsoft.WindowsAzure.Storage.Blob.ICloudBlob.DownloadToByteArrayAsync(System.Byte[],System.Int32)"/>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.OutputFileReference.DeleteAsync(System.Threading.CancellationToken)">
+            <summary>
+            Deletes the file from persistent storage.
+            </summary>
+            <param name="cancellationToken">A <see cref="T:System.Threading.CancellationToken"/> for controlling the lifetime of the asynchronous operation.</param>
+            <returns>A <see cref="T:System.Threading.Tasks.Task"/> that represents the asynchronous operation.</returns>
+            <seealso cref="M:Microsoft.WindowsAzure.Storage.Blob.ICloudBlob.DeleteAsync"/>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.OutputFileReference.OpenReadAsync(System.Threading.CancellationToken)">
+            <summary>
+            Opens a stream for reading from the file in persistent storage.
+            </summary>
+            <param name="cancellationToken">A <see cref="T:System.Threading.CancellationToken"/> for controlling the lifetime of the asynchronous operation.</param>
+            <returns>A stream to be used for reading from the blob.</returns>
+            <seealso cref="M:Microsoft.WindowsAzure.Storage.Blob.ICloudBlob.OpenReadAsync(Microsoft.WindowsAzure.Storage.AccessCondition,Microsoft.WindowsAzure.Storage.Blob.BlobRequestOptions,Microsoft.WindowsAzure.Storage.OperationContext)"/>
+        </member>
+        <member name="T:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind">
+            <summary>
+            Represents a category of job outputs, such as the main task output, or a preview of the
+            task output, or a log of the task processing.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind.TaskOutput">
+            <summary>
+            A <see cref="T:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind"/> representing the main output of a task.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind.TaskPreview">
+            <summary>
+            A <see cref="T:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind"/> representing a preview of the task output.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind.TaskLog">
+            <summary>
+            A <see cref="T:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind"/> representing a log of the task processing.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind.TaskIntermediate">
+            <summary>
+            A <see cref="T:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind"/> representing an intermediate file, for example being
+            persisted for diagnostic or checkpointing purposes.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind.Custom(System.String)">
+            <summary>
+            Gets a <see cref="T:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind"/> representing a custom category of task outputs.
+            </summary>
+            <param name="text">A text identifier for the custom TaskOutputKind.</param>
+            <returns>A TaskOutputKind with the specified text.</returns>
+            <exception cref="T:System.ArgumentNullException"><paramref name="text"/> is null.</exception>
+            <exception cref="T:System.ArgumentException"><paramref name="text"/> is empty.</exception>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind.ToString">
+            <summary>
+            Returns a string that represents the current object.
+            </summary>
+            <returns>A textual representation of the <see cref="T:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind"/>.</returns>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind.Equals(Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind)">
+            <summary>
+            Determinates whether this instance and another specified <see cref="T:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind"/>
+            have the same value.
+            </summary>
+            <param name="other">The TaskOutputKind to compare to this instance.</param>
+            <returns>true if the value of the <paramref name="other"/> parameter is the same as
+            the value of this instance; otherwise, false.</returns>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind.Equals(System.Object)">
+            <summary>
+            Determines whether the specified object is equal to the current object.
+            </summary>
+            <param name="obj">The object to compare with the current object.</param>
+            <returns>true if the specified object is equal to the current object; otherwise, false.</returns>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind.GetHashCode">
+            <summary>
+            Returns the hash code for this <see cref="T:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind"/>.
+            </summary>
+            <returns>A 32-bit signed integer hash code.</returns>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind.op_Equality(Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind,Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind)">
+            <summary>
+            Determines whether two specified <see cref="T:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind"/> instances have the same value.
+            </summary>
+            <param name="x">The first TaskOutputKind to compare.</param>
+            <param name="y">The second TaskOutputKind to compare.</param>
+            <returns>true if the value of <paramref name="x"/> is the same as the value of <paramref name="y"/>; otherwise, false.</returns>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind.op_Inequality(Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind,Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind)">
+            <summary>
+            Determines whether two specified <see cref="T:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind"/> instances have different values.
+            </summary>
+            <param name="x">The first TaskOutputKind to compare.</param>
+            <param name="y">The second TaskOutputKind to compare.</param>
+            <returns>true if the value of <paramref name="x"/> is different from the value of <paramref name="y"/>; otherwise, false.</returns>
+        </member>
+        <member name="T:Microsoft.Azure.Batch.Conventions.Files.TaskOutputStorage">
+            <summary>
+            Represents persistent storage for the outputs of an Azure Batch task.
+            </summary>
+            <remarks>
+            Task outputs refer to output data logically associated with a specific task, rather than
+            the job as a whole. For example, in a movie rendering job, if a task rendered a single frame,
+            that frame would be a task output.  Logs and other diagnostic information such as intermediate
+            files may also be persisted as task outputs (see <see cref="T:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind"/> for a way to
+            categorise these so that clients can distinguish between the main output and auxiliary data).
+            </remarks>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.TaskOutputStorage.#ctor(System.Uri,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Microsoft.Azure.Batch.Conventions.Files.JobOutputStorage"/> class from a task id and
+            a URL representing the job output container.
+            </summary>
+            <param name="jobOutputContainerUri">The URL in Azure storage of the blob container to
+            use for outputs associated with this job. This URL must contain a SAS (Shared Access
+            Signature) granting access to the container, or the container must be public.</param>
+            <param name="taskId">The id of the Azure Batch task.</param>
+            <remarks>The container must already exist; the TaskOutputStorage class does not create
+            it for you.</remarks>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.TaskOutputStorage.#ctor(Microsoft.WindowsAzure.Storage.CloudStorageAccount,System.String,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Microsoft.Azure.Batch.Conventions.Files.JobOutputStorage"/> class from a storage account,
+            job id, and task id.
+            </summary>
+            <param name="storageAccount">The storage account linked to the Azure Batch account.</param>
+            <param name="jobId">The id of the Azure Batch job containing the task.</param>
+            <param name="taskId">The id of the Azure Batch task.</param>
+            <remarks>The job output container must already exist; the TaskOutputStorage class does not create
+            it for you.</remarks>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.TaskOutputStorage.#ctor(System.Uri,System.String,Microsoft.WindowsAzure.Storage.RetryPolicies.IRetryPolicy)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Microsoft.Azure.Batch.Conventions.Files.JobOutputStorage"/> class from a task id and
+            a URL representing the job output container.
+            </summary>
+            <param name="jobOutputContainerUri">The URL in Azure storage of the blob container to
+            use for outputs associated with this job. This URL must contain a SAS (Shared Access
+            Signature) granting access to the container, or the container must be public.</param>
+            <param name="taskId">The id of the Azure Batch task.</param>
+            <param name="storageRetryPolicy">The retry policy for storage requests.</param>
+            <remarks>The container must already exist; the TaskOutputStorage class does not create
+            it for you.</remarks>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.TaskOutputStorage.#ctor(Microsoft.WindowsAzure.Storage.CloudStorageAccount,System.String,System.String,Microsoft.WindowsAzure.Storage.RetryPolicies.IRetryPolicy)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Microsoft.Azure.Batch.Conventions.Files.JobOutputStorage"/> class from a storage account,
+            job id, and task id.
+            </summary>
+            <param name="storageAccount">The storage account linked to the Azure Batch account.</param>
+            <param name="jobId">The id of the Azure Batch job containing the task.</param>
+            <param name="taskId">The id of the Azure Batch task.</param>
+            <param name="storageRetryPolicy">The retry policy for storage requests.</param>
+            <remarks>The job output container must already exist; the TaskOutputStorage class does not create
+            it for you.</remarks>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.TaskOutputStorage.SaveAsync(Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Saves the specified file to persistent storage.
+            </summary>
+            <param name="kind">A <see cref="T:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind"/> representing the category under which to
+            store this file, for example <see cref="F:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind.TaskOutput"/> or <see cref="F:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind.TaskLog"/>.</param>
+            <param name="relativePath">The path of the file to save, relative to the current directory.
+            If the file is in a subdirectory of the current directory, the relative path will be preserved
+            in blob storage.</param>
+            <param name="cancellationToken">A <see cref="T:System.Threading.CancellationToken"/> for controlling the lifetime of the asynchronous operation.</param>
+            <returns>A <see cref="T:System.Threading.Tasks.Task"/> that represents the asynchronous operation.</returns>
+            <remarks>If the file is outside the current directory, traversals up the directory tree are removed.
+            For example, a <paramref name="relativePath"/> of "..\ProcessEnv.cmd" would be treated as "ProcessEnv.cmd"
+            for the purposes of creating a blob name.</remarks>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="kind"/> or <paramref name="relativePath"/> argument is null.</exception>
+            <exception cref="T:System.ArgumentException">The <paramref name="relativePath"/> argument is an absolute path, or is empty.</exception>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.TaskOutputStorage.SaveAsync(Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind,System.String,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Saves the specified file to persistent storage.
+            </summary>
+            <param name="kind">A <see cref="T:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind"/> representing the category under which to
+            store this file, for example <see cref="F:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind.TaskOutput"/> or <see cref="F:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind.TaskLog"/>.</param>
+            <param name="sourcePath">The path of the file to save.</param>
+            <param name="destinationRelativePath">The blob name under which to save the file. This may include a
+            relative component, such as "pointclouds/pointcloud_0001.txt".</param>
+            <param name="cancellationToken">A <see cref="T:System.Threading.CancellationToken"/> for controlling the lifetime of the asynchronous operation.</param>
+            <returns>A <see cref="T:System.Threading.Tasks.Task"/> that represents the asynchronous operation.</returns>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="kind"/>, <paramref name="sourcePath"/>, or <paramref name="destinationRelativePath"/> argument is null.</exception>
+            <exception cref="T:System.ArgumentException">The <paramref name="sourcePath"/> or <paramref name="destinationRelativePath"/> argument is empty.</exception>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.TaskOutputStorage.SaveTextAsync(Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind,System.String,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Saves the specified text to persistent storage, without requiring you to create a local file.
+            </summary>
+            <param name="kind">A <see cref="T:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind"/> representing the category under which to
+            store this data, for example <see cref="F:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind.TaskOutput"/> or <see cref="F:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind.TaskLog"/>.</param>
+            <param name="text">The text to save.</param>
+            <param name="destinationRelativePath">The blob name under which to save the text. This may include a
+            relative component, such as "records/widget42.json".</param>
+            <param name="cancellationToken">A <see cref="T:System.Threading.CancellationToken"/> for controlling the lifetime of the asynchronous operation.</param>
+            <returns>A <see cref="T:System.Threading.Tasks.Task"/> that represents the asynchronous operation.</returns>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="kind"/>, <paramref name="text"/>, or <paramref name="destinationRelativePath"/> argument is null.</exception>
+            <exception cref="T:System.ArgumentException">The <paramref name="destinationRelativePath"/> argument is empty.</exception>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.TaskOutputStorage.ListOutputs(Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind)">
+            <summary>
+            Lists the task outputs of the specified kind.
+            </summary>
+            <param name="kind">A <see cref="T:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind"/> representing the category of outputs to
+            list, for example <see cref="F:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind.TaskOutput"/> or <see cref="F:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind.TaskLog"/>.</param>
+            <returns>A list of persisted task outputs of the specified kind.</returns>
+            <remarks>The list is retrieved lazily from Azure blob storage when it is enumerated.</remarks>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.TaskOutputStorage.GetOutputAsync(Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Retrieves a task output from Azure blob storage by kind and path.
+            </summary>
+            <param name="kind">A <see cref="T:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind"/> representing the category of the output to
+            retrieve, for example <see cref="F:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind.TaskOutput"/> or <see cref="F:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind.TaskLog"/>.</param>
+            <param name="filePath">The path under which the output was persisted in blob storage.</param>
+            <param name="cancellationToken">A <see cref="T:System.Threading.CancellationToken"/> for controlling the lifetime of the asynchronous operation.</param>
+            <returns>A reference to the requested file in Azure blob storage.</returns>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.TaskOutputStorage.SaveTrackedAsync(System.String)">
+            <summary>
+            Saves the specified file to persistent storage as a <see cref="F:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind.TaskLog"/>,
+            and tracks subsequent appends to the file and appends them to the persistent copy too.
+            </summary>
+            <param name="relativePath">The path of the file to save, relative to the current directory.
+            If the file is in a subdirectory of the current directory, the relative path will be preserved
+            in blob storage.</param>
+            <returns>An <see cref="T:Microsoft.Azure.Batch.Conventions.Files.ITrackedSaveOperation"/> which will save a file to blob storage and will periodically flush file
+            appends to the blob until disposed.  When disposed, all remaining appends are flushed to
+            blob storage, and further tracking of file appends is stopped.</returns>
+            <remarks>
+            <para>Tracking supports only appends. That is, while a file is being tracked, any data added
+            at the end is appended to the persistent storage. Changes to data that has already been uploaded
+            will not be reflected to the persistent store. This method is therefore intended for use only
+            with files such as (non-rotating) log files where data is only added at the end of the file.
+            If the entire contents of a file can change, use <see cref="M:Microsoft.Azure.Batch.Conventions.Files.TaskOutputStorage.SaveAsync(Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind,System.String,System.Threading.CancellationToken)"/>
+            and call it periodically or after each change.</para>
+            <para>If the file is outside the current directory, traversals up the directory tree are removed.
+            For example, a <paramref name="relativePath"/> of "..\ProcessEnv.cmd" would be treated as "ProcessEnv.cmd"
+            for the purposes of creating a blob name.</para>
+            </remarks>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="relativePath"/> argument is null.</exception>
+            <exception cref="T:System.ArgumentException">The <paramref name="relativePath"/> argument is an absolute path, or is empty.</exception>
+        </member>
+        <member name="M:Microsoft.Azure.Batch.Conventions.Files.TaskOutputStorage.SaveTrackedAsync(Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind,System.String,System.String,System.TimeSpan)">
+            <summary>
+            Saves the specified file to persistent storage, and tracks subsequent appends to the file
+            and appends them to the persistent copy too.
+            </summary>
+            <param name="kind">A <see cref="T:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind"/> representing the category under which to
+            store this file, for example <see cref="F:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind.TaskOutput"/> or <see cref="F:Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind.TaskLog"/>.</param>
+            <param name="sourcePath">The path of the file to save.</param>
+            <param name="destinationRelativePath">The blob name under which to save the file. This may include a
+            relative component, such as "pointclouds/pointcloud_0001.txt".</param>
+            <param name="flushInterval">The interval at which to flush appends to persistent storage.</param>
+            <returns>An <see cref="T:Microsoft.Azure.Batch.Conventions.Files.ITrackedSaveOperation"/> which will save a file to blob storage and will periodically flush file
+            appends to the blob until disposed.  When disposed, all remaining appends are flushed to
+            blob storage, and further tracking of file appends is stopped.</returns>
+            <remarks>
+            <para>Tracking supports only appends. That is, while a file is being tracked, any data added
+            at the end is appended to the persistent storage. Changes to data that has already been uploaded
+            will not be reflected to the persistent store. This method is therefore intended for use only
+            with files such as (non-rotating) log files where data is only added at the end of the file.
+            If the entire contents of a file can change, use <see cref="M:Microsoft.Azure.Batch.Conventions.Files.TaskOutputStorage.SaveAsync(Microsoft.Azure.Batch.Conventions.Files.TaskOutputKind,System.String,System.String,System.Threading.CancellationToken)"/>
+            and call it periodically or after each change.</para>
+            </remarks>
+            <exception cref="T:System.ArgumentNullException">The <paramref name="kind"/>, <paramref name="sourcePath"/>, or <paramref name="destinationRelativePath"/> argument is null.</exception>
+            <exception cref="T:System.ArgumentException">The <paramref name="sourcePath"/> or <paramref name="destinationRelativePath"/> argument is empty.</exception>
+        </member>
+    </members>
+</doc>

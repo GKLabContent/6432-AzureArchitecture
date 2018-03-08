@@ -39,6 +39,7 @@
       <Visible>False</Visible>
     </None>
     <Content Include="Deploy-AzureResourceGroup.ps1" />
+    <Content Include="DSC\IISDSC.ps1" />
   </ItemGroup>
   <Target Name="GetReferenceAssemblyPaths" />
 </Project>

@@ -12,7 +12,7 @@ namespace CameraSim.Properties {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "15.0.1.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "15.3.0.0")]
     internal sealed partial class Settings : global::System.Configuration.ApplicationSettingsBase {
         
         private static Settings defaultInstance = ((Settings)(global::System.Configuration.ApplicationSettingsBase.Synchronized(new Settings())));
@@ -25,7 +25,7 @@ namespace CameraSim.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("{Enter your video storage account name}")]
+        [global::System.Configuration.DefaultSettingValueAttribute("tswbatchdata")]
         public string VIDEO_STORAGE_ACCOUNT {
             get {
                 return ((string)(this["VIDEO_STORAGE_ACCOUNT"]));
@@ -34,7 +34,8 @@ namespace CameraSim.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("{Enter your video storage SAS}")]
+        [global::System.Configuration.DefaultSettingValueAttribute("?sv=2016-05-31&sig=P0yFIpZRBu0pG%2Fz9SOKDaAeYqdPsujAqh7MX9Vhd%2B9E%3D&st=2017-09-" +
+            "13T11%3A25%3A01Z&se=2017-09-15T11%3A25%3A01Z&srt=co&ss=bq&sp=racupwdl")]
         public string VIDEO_SAS {
             get {
                 return ((string)(this["VIDEO_SAS"]));

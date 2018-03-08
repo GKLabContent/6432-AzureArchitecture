@@ -3,10 +3,10 @@
   <Profiles />
   <Settings>
     <Setting Name="VIDEO_STORAGE_ACCOUNT" Type="System.String" Scope="Application">
-      <Value Profile="(Default)">{Enter your video storage account name}</Value>
+      <Value Profile="(Default)">tswbatchdata</Value>
     </Setting>
     <Setting Name="VIDEO_SAS" Type="System.String" Scope="User">
-      <Value Profile="(Default)">{Enter your video storage SAS}</Value>
+      <Value Profile="(Default)">?sv=2016-05-31&amp;sig=P0yFIpZRBu0pG%2Fz9SOKDaAeYqdPsujAqh7MX9Vhd%2B9E%3D&amp;st=2017-09-13T11%3A25%3A01Z&amp;se=2017-09-15T11%3A25%3A01Z&amp;srt=co&amp;ss=bq&amp;sp=racupwdl</Value>
     </Setting>
   </Settings>
 </SettingsFile>

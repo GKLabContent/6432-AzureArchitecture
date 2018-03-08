@@ -17,6 +17,18 @@
     },
     "AdminPassword": {
       "type": "securestring"
+    },
+    "_artifactsLocation": {
+      "type": "string",
+      "metadata": {
+        "description": "Auto-generated container in staging storage account to receive post-build staging folder upload"
+      }
+    },
+    "_artifactsLocationSasToken": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Auto-generated token to access _artifactsLocation"
+      }
     }
     },
   "variables": {
@@ -48,7 +60,9 @@
     "VMStorageAccountContainerName": "vhds",
     "WebNSGName": "webNSG",
     "logisticsNSGName": "logisticsNSG",
-    "backofficeNSGName": "backofficeNSG"
+    "backofficeNSGName": "backofficeNSG",
+    "IISDSCArchiveFolder": "DSC",
+    "IISDSCArchiveFileName": "IISDSC.zip"
   },
   "resources": [
     {
@@ -344,7 +358,40 @@
             }
           ]
         }
-      }
+      },
+      "resources": [
+        {
+          "name": "Microsoft.Powershell.DSC",
+          "type": "extensions",
+          "location": "[resourceGroup().location]",
+          "apiVersion": "2016-03-30",
+          "dependsOn": [
+            "[resourceId('Microsoft.Compute/virtualMachines', variables('webServerName'))]"
+          ],
+          "tags": {
+            "displayName": "IISDSC"
+          },
+          "properties": {
+            "publisher": "Microsoft.Powershell",
+            "type": "DSC",
+            "typeHandlerVersion": "2.9",
+            "autoUpgradeMinorVersion": true,
+            "settings": {
+              "configuration": {
+                "url": "[concat(parameters('_artifactsLocation'), '/', variables('IISDSCArchiveFolder'), '/', variables('IISDSCArchiveFileName'))]",
+                "script": "IISDSC.ps1",
+                "function": "Main"
+              },
+              "configurationArguments": {
+                "nodeName": "[variables('webServerName')]"
+              }
+            },
+            "protectedSettings": {
+              "configurationUrlSasToken": "[parameters('_artifactsLocationSasToken')]"
+            }
+          }
+        }
+      ]
     },
     {
       "apiVersion": "2015-06-15",
