@@ -1,0 +1,220 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "publicPrefix": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 6
+    },
+    "medFloName": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 6,
+      "defaultValue": "medFlo"
+    },
+
+    "dbAdminLogin": {
+      "type": "string",
+      "minLength": 1
+    },
+    "dbAdminPassword": {
+      "type": "securestring"
+    },
+    "objectId": {
+      "type": "string"
+    }
+  },
+  "variables": {
+    "publicName": "[toLower(concat(parameters('publicPrefix'),parameters('medFloName'), uniqueString(resourceGroup().id)))]",
+    "webAppPlanName": "[concat(parameters('medFloName'),'-asp')]",
+    "webAppPlanSku": "S1",
+    "medflowdataName": "[variables('publicName')]",
+    "dbRequestedServiceObjectiveName": "Basic",
+    "dbEdition": "Basic",
+    "dbCollation": "SQL_Latin1_General_CP1_CI_AS",
+    "dbName": "medFlowData",
+    "keyVaultName": "[concat(parameters('medFloName'),'-kv')]",
+    "enableVaultForDeployment": true,
+    "enableVaultForTemplateDeployment": true,
+    "enableVaultForDiskEncryption": true,
+    "vaultAccessPolicies": "",
+    "vaultSku": "Standard",
+    "namingInfix": "[toLower(substring(concat(variables('publicName'), uniqueString(resourceGroup().id)), 0, 9))]",
+    "storageAccountName": "[variables('namingInfix')]",
+    "vaultLogRetentionDays": 10
+
+  },
+  "resources": [
+    {
+      "name": "[variables('webAppPlanName')]",
+      "type": "Microsoft.Web/serverfarms",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-08-01",
+      "sku": {
+        "name": "[variables('webAppPlanSku')]"
+      },
+      "dependsOn": [],
+      "tags": {
+        "displayName": "medFloUI"
+      },
+      "properties": {
+        "name": "[variables('webAppPlanName')]",
+        "numberOfWorkers": 1
+      }
+    },
+    {
+      "name": "[variables('publicName')]",
+      "type": "Microsoft.Web/sites",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-08-01",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', variables('webAppPlanName'))]"
+      ],
+      "tags": {
+        "[concat('hidden-related:', resourceId('Microsoft.Web/serverfarms', variables('webAppPlanName')))]": "Resource",
+        "displayName": "medFloUI"
+      },
+      "properties": {
+        "name": "[variables('publicName')]",
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('webAppPlanName'))]"
+      }
+    },
+    {
+      "name": "[variables('medflowdataName')]",
+      "type": "Microsoft.Sql/servers",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2014-04-01-preview",
+      "dependsOn": [],
+      "tags": {
+        "displayName": "medflowdata"
+      },
+      "properties": {
+        "administratorLogin": "[parameters('dbAdminLogin')]",
+        "administratorLoginPassword": "[parameters('dbAdminPassword')]"
+      },
+      "resources": [
+        {
+          "name": "AllowAllWindowsAzureIps",
+          "type": "firewallrules",
+          "location": "[resourceGroup().location]",
+          "apiVersion": "2014-04-01-preview",
+          "dependsOn": [
+            "[resourceId('Microsoft.Sql/servers', variables('medflowdataName'))]"
+          ],
+          "properties": {
+            "startIpAddress": "0.0.0.0",
+            "endIpAddress": "0.0.0.0"
+          }
+        },
+        {
+          "name": "[variables('dbName')]",
+          "type": "databases",
+          "location": "[resourceGroup().location]",
+          "apiVersion": "2014-04-01-preview",
+          "dependsOn": [
+            "[resourceId('Microsoft.Sql/servers', variables('medflowdataName'))]"
+          ],
+          "tags": {
+            "displayName": "medFloData"
+          },
+          "properties": {
+            "collation": "[variables('dbCollation')]",
+            "edition": "[variables('dbEdition')]",
+            "maxSizeBytes": "1073741824",
+            "requestedServiceObjectiveName": "[variables('dbRequestedServiceObjectiveName')]"
+          }
+        }
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults",
+      "name": "[variables('keyVaultName')]",
+      "apiVersion": "2016-10-01",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "Key Vault with logging"
+      },
+      "properties": {
+        "enabledForDeployment": "[variables('enableVaultForDeployment')]",
+        "enabledForTemplateDeployment": "[variables('enableVaultForTemplateDeployment')]",
+        "enabledForDiskEncryption": "[variables('enableVaultForDiskEncryption')]",
+        "tenantId": "[subscription().tenantId]",
+        "accessPolicies": [
+          {
+            "tenantId": "[subscription().tenantId]",
+            "objectId": "[parameters('objectId')]",
+            "permissions": {
+              "keys": "all",
+              "secrets": "all"
+
+            }
+          }
+        ],
+        "sku": {
+          "name": "[variables('vaultSku')]",
+          "family": "A"
+        }
+      },
+      "resources": [
+        {
+          "type": "Microsoft.KeyVault/vaults/providers/diagnosticsettings",
+          "name": "[concat(variables('keyVaultName'), '/Microsoft.Insights/service')]",
+          "apiVersion": "2016-09-01",
+          "location": "[resourceGroup().location]",
+          "dependsOn": [
+            "[concat('Microsoft.KeyVault/vaults/', variables('keyVaultName'))]",
+            "[concat('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]"
+          ],
+          "properties": {
+            "storageAccountId": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
+            "logs": [
+              {
+                "category": "AuditEvent",
+                "enabled": true,
+                "retentionPolicy": {
+                  "enabled": true,
+                  "days": "[variables('vaultLogRetentionDays')]"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "name": "[concat(variables('keyVaultName'), '/dbConnectionInfo')]",
+      "apiVersion": "2016-10-01",
+      "location": "eastus",
+      "scale": null,
+      "properties": {
+        "contentType": "string",
+        "value": "[concat(parameters('dbAdminLogin'),':',parameters('dbAdminPassword'))]",
+        "attributes": {
+          "enabled": true
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "name": "[variables('storageAccountName')]",
+      "apiVersion": "2016-12-01",
+      "location": "[resourceGroup().location]",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "kind": "Storage",
+      "tags": {
+        "displayName": "concat('Key Vault ', parameters('keyVaultName'), ' diagnostics storage account')"
+      },
+      "properties": {}
+    }
+
+  ],
+  "outputs": {
+  }
+}
