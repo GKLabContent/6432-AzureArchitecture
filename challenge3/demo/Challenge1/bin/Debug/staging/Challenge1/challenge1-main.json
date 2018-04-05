@@ -55,8 +55,8 @@
         },
         "parameters": {
           "VMName": { "value": "[parameters('VMName')]" },
-          "AdminPassword": { "value": "[parameters('AdminPassword')]" },
           "AdminUserName": { "value": "[parameters('AdminUserName')]" },
+          "AdminPassword": { "value": "[parameters('AdminPassword')]" },
           "_artifactsLocation": { "value": "[parameters('_artifactsLocation')]" },
           "_artifactsLocationSasToken": { "value": "[parameters('_artifactsLocationSasToken')]" }
         }
