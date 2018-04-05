@@ -26,6 +26,7 @@
     <Content Include="azuredeploy.json" />
     <Content Include="azuredeploy.parameters.json" />
     <None Include="Continue.ps1" />
+    <None Include="CreateData.ps1" />
     <None Include="Deployment.targets">
       <Visible>False</Visible>
     </None>

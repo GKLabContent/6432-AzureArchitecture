@@ -2,16 +2,6 @@
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "keyVaultResourceGroup": {
-      "type": "string",
-      "minLength": 3
-
-    },
-    "keyVaultName": {
-      "type": "string",
-      "minLength": 3
-
-    },
     "publicPrefix": {
       "type": "string",
       "minLength": 3
@@ -46,6 +36,9 @@
       "metadata": {
         "description": "Administrator password on all VMs"
       }
+    },
+    "CostCenter": {
+      "type": "string"
     }
   },
   "variables": {
@@ -86,7 +79,8 @@
       "location": "[variables('location')]",
       "apiVersion": "2016-03-30",
       "tags": {
-        "displayName": "VirtualNetwork"
+        "displayName": "VirtualNetwork",
+        "CostCenter": "[parameters('CostCenter')]"
       },
       "properties": {
         "addressSpace": {
@@ -110,7 +104,8 @@
       "location": "[variables('location')]",
       "apiVersion": "2016-01-01",
       "tags": {
-        "displayName": "Diagnostic Storage Accounts"
+        "displayName": "Diagnostic Storage Accounts",
+        "CostCenter": "[parameters('CostCenter')]"
       },
 
       "sku": {
@@ -124,7 +119,8 @@
       "location": "[variables('location')]",
       "apiVersion": "2016-03-30",
       "tags": {
-        "displayName": "PublicIP"
+        "displayName": "Public IP",
+        "CostCenter": "[parameters('CostCenter')]"
       },
       "properties": {
         "publicIPAllocationMethod": "Dynamic",
@@ -139,7 +135,8 @@
       "location": "[variables('location')]",
       "apiVersion": "2016-03-30",
       "tags": {
-        "displayName": "LoadBalancer"
+        "displayName": "LoadBalancer",
+        "CostCenter": "[parameters('CostCenter')]"
       },
       "dependsOn": [
         "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName'))]"
@@ -182,7 +179,8 @@
       "location": "[variables('location')]",
       "apiVersion": "2017-03-30",
       "tags": {
-        "displayName": "VM Scale Set"
+        "displayName": "VM Scale Set",
+        "CostCenter": "[parameters('CostCenter')]"
       },
       "dependsOn": [
         "[variables('lbID')]",

@@ -1,34 +1,33 @@
 ﻿$rg = "6342C4"
-$servername = "tsw6342c44tzojpypwqlsm"
+$webApp = (Get-AzureRmWebApp -ResourceGroupName $rg)[0]
+$servername = $webApp.SiteName
 
 #SQL Settings
 $adminName = "student"
 $adminPassword = "Pa55w.rd1234"
 $databaseName = "demo"
 
+#Login if necessary
+Login-AzureRmAccount
 
 
-#Add File
+#Add Files
+$data = "{'id':'us01','name':'butter'}","{'id':'us02','name':'eggs'}","{'id':'us03','name':'flour'}"
 $container = "unstructured"
-$fileName = "demo.json"
-$localFile = ".\$($fileName)"
-$content = "
-{
-    'products':[
-        {'id':'us01','name':'butter'},
-        {'id':'us02','name':'eggs'},
-        {'id':'us03','name':'flour'}
 
-    ]
-}
-"
 $sa = (Get-AzureRmStorageAccount -ResourceGroupName $rg)[0]
 $key = (Get-AzureRmStorageAccountKey -ResourceGroupName $rg -Name $sa.StorageAccountName)[0].Value
 $saContext = New-AzureStorageContext -StorageAccountName $sa.StorageAccountName -StorageAccountKey $key 
 New-AzureStorageContainer -Name $container -Permission Off -Context $saContext
-$content > $localFile
-Set-AzureStorageBlobContent -File $localFile -Container $container -Blob $fileName -BlobType Block -Context $saContext
-Remove-Item -Path $localFile
+$fileNo = 0
+foreach ($content in $data) {
+    $blobName = "demo$($fileNo).txt"
+    $content > $blobName
+    Set-AzureStorageBlobContent -File $blobName -Container $container -Blob $blobName -BlobType Block -Context $saContext
+    Remove-Item -Path $blobName
+    $fileNo++
+
+}
 
 #Add SQL Data
 
@@ -57,4 +56,6 @@ $key = (Invoke-AzureRmResourceAction -Action listKeys `
     -ResourceGroupName $rg `
     -Name $servername `
     -Force)[0].PrimaryMasterKey
+"Server Name: $($servername)"
+"CosmosDB Key: $($key)"
 

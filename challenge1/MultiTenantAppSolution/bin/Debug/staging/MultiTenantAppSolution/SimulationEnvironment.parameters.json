@@ -14,11 +14,9 @@
     "adminPassword": {
       "value": "Pa55w.rd1234"
     },
-    "keyVaultResourceGroup": {
-      "value": "20533C1"
-    },
-    "keyVaultName": {
-      "value": "modFlo-kv"
+
+    "CostCenter": {
+      "value": "1234"
     }
   }
 }

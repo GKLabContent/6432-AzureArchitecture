@@ -13,6 +13,9 @@
     },
     "dbAdminPassword": {
       "value": "Pa55w.rd1234"
+    },
+    "objectId": {
+      "value": "d35ab9de-86a9-4521-a3d8-f82a32fd9bad"
     }
   }
 }
