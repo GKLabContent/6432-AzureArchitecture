@@ -29,7 +29,7 @@
     //  "metadata": {
     //    "description": "Auto-generated token to access _artifactsLocation"
     //  }
-    }
+    //}
     },
   "variables": {
     "onpremPrefixes": [ "10.0.0.0/24", "10.254.0.0/27" ],
