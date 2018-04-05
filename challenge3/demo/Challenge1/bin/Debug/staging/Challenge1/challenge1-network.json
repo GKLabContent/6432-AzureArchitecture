@@ -360,37 +360,37 @@
         }
       },
       "resources": [
-        {
-          "name": "Microsoft.Powershell.DSC",
-          "type": "extensions",
-          "location": "[resourceGroup().location]",
-          "apiVersion": "2016-03-30",
-          "dependsOn": [
-            "[resourceId('Microsoft.Compute/virtualMachines', variables('webServerName'))]"
-          ],
-          "tags": {
-            "displayName": "IISDSC"
-          },
-          "properties": {
-            "publisher": "Microsoft.Powershell",
-            "type": "DSC",
-            "typeHandlerVersion": "2.9",
-            "autoUpgradeMinorVersion": true,
-            "settings": {
-              "configuration": {
-                "url": "[concat(parameters('_artifactsLocation'), '/', variables('IISDSCArchiveFolder'), '/', variables('IISDSCArchiveFileName'))]",
-                "script": "IISDSC.ps1",
-                "function": "Main"
-              },
-              "configurationArguments": {
-                "nodeName": "[variables('webServerName')]"
-              }
-            },
-            "protectedSettings": {
-              "configurationUrlSasToken": "[parameters('_artifactsLocationSasToken')]"
-            }
-          }
-        }
+        //{
+        //  "name": "Microsoft.Powershell.DSC",
+        //  "type": "extensions",
+        //  "location": "[resourceGroup().location]",
+        //  "apiVersion": "2016-03-30",
+        //  "dependsOn": [
+        //    "[resourceId('Microsoft.Compute/virtualMachines', variables('webServerName'))]"
+        //  ],
+        //  "tags": {
+        //    "displayName": "IISDSC"
+        //  },
+        //  "properties": {
+        //    "publisher": "Microsoft.Powershell",
+        //    "type": "DSC",
+        //    "typeHandlerVersion": "2.9",
+        //    "autoUpgradeMinorVersion": true,
+        //    "settings": {
+        //      "configuration": {
+        //        "url": "[concat(parameters('_artifactsLocation'), '/', variables('IISDSCArchiveFolder'), '/', variables('IISDSCArchiveFileName'))]",
+        //        "script": "IISDSC.ps1",
+        //        "function": "Main"
+        //      },
+        //      "configurationArguments": {
+        //        "nodeName": "[variables('webServerName')]"
+        //      }
+        //    },
+        //    "protectedSettings": {
+        //      "configurationUrlSasToken": "[parameters('_artifactsLocationSasToken')]"
+        //    }
+        //  }
+        //}
       ]
     },
     {
