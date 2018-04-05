@@ -18,7 +18,7 @@
     }
   },
   "variables": {
-    "templateBaseUrl": "https://raw.githubusercontent.com/GKLabContent/6432-AzureArchitecture/master/challenge1/demo/Challenge1/",
+    "templateBaseUrl": "https://raw.githubusercontent.com/GKLabContent/6432-AzureArchitecture/master/challenge3/demo/Challenge1/",
     "networkTemplateFile": "[concat(variables('templateBaseUrl'),'challenge1-network.json')]",
     "connectionTemplateFile": "[concat(variables('templateBaseUrl'),'challenge1-connections.json')]",
     "vmssTemplateFile": "[concat(variables('templateBaseUrl'),'LinuxVirtualMachineScaleSet.json')]",
