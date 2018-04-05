@@ -17,7 +17,7 @@
     },
     "AdminPassword": {
       "type": "securestring"
-    }
+    },
     "_artifactsLocation": {
       "type": "string",
       "metadata": {
