@@ -28,14 +28,14 @@ namespace cosmosDBLoad
         private static async void DocumentDB_Load()
         {
             string serverName = "tsw6342c44tzojpypwqlsm";
-            string DatabaseName = "products";
+            string cosmosDBKey = "SJbpitSnIw0pFQWm5TqpAVk8Cceu9tdWtz2ENgSnXdfkJAKLHZoYgQ1H3IP86ptkMTu1TYPPfeyGiPY8xuS44A==";
+           string DatabaseName = "products";
             string CollectionName = "productlist";
 
             string endpointUrl = $"https://{serverName}.documents.azure.com";
-            string authorizationKey = "pYpZfVsHkqwJ9wBXJhKGGmGI4z0dtNCvAreeGNYDla3qAQFQIyPfRDZ57ELP2wvNfAPV7wLDURyX8UY6MSt0mA==";
-
+ 
             ConnectionPolicy connectionPolicy = new ConnectionPolicy();
-            DocumentClient client = new DocumentClient(new Uri(endpointUrl), authorizationKey, connectionPolicy);
+            DocumentClient client = new DocumentClient(new Uri(endpointUrl), cosmosDBKey, connectionPolicy);
             client.CreateDatabaseIfNotExistsAsync(new Database { Id = DatabaseName }).Wait();
             DocumentCollection simpleCollection = await client.CreateDocumentCollectionIfNotExistsAsync(
      UriFactory.CreateDatabaseUri(DatabaseName),
