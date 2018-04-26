@@ -3,7 +3,7 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "VMName": {
-      "value": "cha1"
+      "value": "cha"
     },
     "AdminUserName": {
       "value": "student"
