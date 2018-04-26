@@ -83,8 +83,8 @@ $videoContainer = New-AzureStorageContainer -Name $resultsContainerName -Permiss
 
 #Set up Service Bus
 $serviceBus = New-AzureRmServiceBusNamespace -ResourceGroupName $resourceGroup -Location $location -NamespaceName $serviceBusNamespace -SkuName Basic
-$serviceBusAuth = New-AzureRmServiceBusNamespaceAuthorizationRule -ResourceGroup $resourceGroup -NamespaceName $serviceBusNamespace -AuthorizationRuleName $serviceBusAuthName -Rights @("Listen","Send","Manage")
-$ServiceBusKey = Get-AzureRmServiceBusNamespaceKey -ResourceGroup $resourceGroup -NamespaceName $serviceBusNamespace -AuthorizationRuleName $serviceBusAuthName 
+$serviceBusAuth = New-AzureRmServiceBusAuthorizationRule -ResourceGroup $resourceGroup -NamespaceName $serviceBusNamespace -AuthorizationRuleName $serviceBusAuthName -Rights @("Listen","Send","Manage")
+$ServiceBusKey = Get-AzureRmServiceBusKey -ResourceGroup $resourceGroup -NamespaceName $serviceBusNamespace -AuthorizationRuleName $serviceBusAuthName 
 $serviceBusQueue = New-AzureRmServiceBusQueue -ResourceGroup $resourceGroup -NamespaceName $serviceBusNamespace -QueueName $queueName -EnablePartitioning $false 
 
 #set up batch account
@@ -93,7 +93,7 @@ $batchcontext = Get-AzureRmBatchAccountKeys -AccountName $batchAccountName -Reso
 
 #Set up batch pool
 $imageref = New-Object -TypeName "Microsoft.Azure.Commands.Batch.Models.PSImageReference" -ArgumentList @($poolOffer, $poolPublisher, $poolSku, $poolVersion)
-$configuration = New-Object -TypeName "Microsoft.Azure.Commands.Batch.Models.PSVirtualMachineConfiguration" -ArgumentList @($imageref,$batchAgentSku,  $null)
+$configuration = New-Object -TypeName "Microsoft.Azure.Commands.Batch.Models.PSVirtualMachineConfiguration" -ArgumentList @($imageref,$batchAgentSku)
 New-AzureBatchPool -id $poolName -VirtualMachineSize "Standard_A1" -TargetDedicated 1 -VirtualMachineConfiguration $configuration -BatchContext $batchcontext 
 
 #Set up Batch application
